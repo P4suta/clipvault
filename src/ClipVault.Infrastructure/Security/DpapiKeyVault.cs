@@ -3,8 +3,9 @@ using ClipVault.Infrastructure.Persistence;
 namespace ClipVault.Infrastructure.Security;
 
 /// <summary>
-/// The key vault for the default (disk-persistent) mode. Using <see cref="KeyProtector"/>, it generates the DEK
-/// on first use and seals it with DPAPI (CurrentUser), then decrypts and returns it afterwards (no passphrase).
+/// The key vault for disk-persistent mode under DPAPI-only protection (the default protector). Using
+/// <see cref="KeyProtector"/>, it generates the DEK on first use and seals it with DPAPI (CurrentUser), then
+/// decrypts and returns it afterwards (no passphrase).
 /// Migrating to passphrase protection or crypto-erasing is handled by higher-level features that operate on
 /// <see cref="KeyProtector"/> directly.
 /// </summary>
