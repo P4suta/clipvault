@@ -1,0 +1,102 @@
+using System.Diagnostics.CodeAnalysis;
+using ClipVault.Domain.Entities;
+using ClipVault.Domain.ValueObjects;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
+using Windows.Storage.Streams;
+
+namespace ClipVaultApp.ViewModels;
+
+/// <summary>
+/// Display wrapper representing a single row in the list. The underlying
+/// <see cref="ClipboardEntry"/> is treated as read-only; state changes (pin, last-used time, etc.)
+/// are made only through <c>ClipboardActionService</c>.
+/// </summary>
+public sealed partial class EntryViewModel : ObservableObject
+{
+    /// <summary>Flag that ensures the thumbnail is decoded only once.</summary>
+    private bool _isThumbnailLoadStarted;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EntryViewModel"/> class.
+    /// </summary>
+    /// <param name="entry">The underlying domain entity wrapped by this row.</param>
+    public EntryViewModel(ClipboardEntry entry)
+    {
+        Entry = entry ?? throw new ArgumentNullException(nameof(entry));
+    }
+
+    /// <summary>Gets the underlying domain entity passed to the action service.</summary>
+    public ClipboardEntry Entry { get; }
+
+    /// <summary>Gets the thumbnail image for the entry, if available.</summary>
+    [ObservableProperty]
+    public partial ImageSource? Thumbnail { get; private set; }
+
+    /// <summary>Gets the short summary used in the list display.</summary>
+    public string Preview => Entry.Preview;
+
+    /// <summary>Gets a value indicating whether the entry is pinned.</summary>
+    public bool IsPinned => Entry.IsPinned;
+
+    /// <summary>Gets a value indicating whether the entry is an image entry.</summary>
+    public bool IsImage => Entry.ContentType == ClipContentType.Image;
+
+    /// <summary>Gets a value indicating whether the entry is a text entry (used to switch glyph display).</summary>
+    public bool IsText => Entry.ContentType == ClipContentType.Text;
+
+    /// <summary>Gets the process name of the source application.</summary>
+    public string SourceName => Entry.Source.ProcessName;
+
+    /// <summary>Gets the last-used time (short local-time representation; follows the current culture as it is user-facing).</summary>
+    public string Timestamp =>
+        Entry.LastUsedAt.ToLocalTime().ToString("g", System.Globalization.CultureInfo.CurrentCulture);
+
+    /// <summary>
+    /// Lazily and asynchronously decodes the thumbnail of an image entry. Intended to be called
+    /// only once, when each row in the list is loaded.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Best-effort thumbnail render; falls back to a glyph on failure.")]
+    public async Task EnsureThumbnailAsync()
+    {
+        if (_isThumbnailLoadStarted || !IsImage)
+        {
+            return;
+        }
+
+        _isThumbnailLoadStarted = true;
+
+        var image = Entry.Image;
+        if (image is null || image.Thumbnail.Length == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var bitmap = new BitmapImage();
+            using var stream = new InMemoryRandomAccessStream();
+            using (var writer = new DataWriter(stream))
+            {
+                writer.WriteBytes(image.Thumbnail);
+                await writer.StoreAsync();
+                await writer.FlushAsync();
+                writer.DetachStream();
+            }
+
+            stream.Seek(0);
+            await bitmap.SetSourceAsync(stream);
+            Thumbnail = bitmap;
+        }
+        catch
+        {
+            // Do not break the whole list if thumbnail decoding fails (fall back to glyph display).
+            _isThumbnailLoadStarted = false;
+        }
+    }
+}

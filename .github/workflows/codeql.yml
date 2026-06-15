@@ -1,0 +1,42 @@
+# CodeQL static analysis for C# (defense-in-depth on top of the in-build analyzers).
+# Manual build-mode: CodeQL traces the real `just build` so it sees all four projects' compilation.
+name: codeql
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "23 4 * * 1" # weekly, Monday 04:23 UTC
+
+permissions:
+  contents: read
+  security-events: write # required to upload the SARIF results
+
+env:
+  CI: "true"
+
+jobs:
+  analyze:
+    # Windows is required to build the net10.0-windows + WinUI projects that CodeQL traces.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
+        with:
+          install: true
+          cache: true
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@dd903d2e4f5405488e5ef1422510ee31c8b32357 # v3
+        with:
+          languages: csharp
+          build-mode: manual
+
+      - name: Build (traced by CodeQL)
+        run: mise exec -- just build
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@dd903d2e4f5405488e5ef1422510ee31c8b32357 # v3

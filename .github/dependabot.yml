@@ -1,0 +1,23 @@
+# Automated dependency updates. NuGet updates flow through Central Package Management
+# (Directory.Packages.props) and regenerate packages.lock.json; github-actions updates keep the
+# SHA-pinned actions current (bumping both the pin and its trailing version comment).
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      analyzers:
+        patterns:
+          - "*Analyzer*"
+          - "StyleCop.Analyzers"
+          - "SonarAnalyzer.CSharp"
+          - "Roslynator.Analyzers"
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5

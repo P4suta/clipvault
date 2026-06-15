@@ -1,0 +1,52 @@
+# Continuous integration: build, analyze, test, and audit dependencies on every push/PR.
+# Mirrors the local `just` flow so CI and developer machines share one source of truth.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Least privilege: CI only needs to read the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true" # enables ContinuousIntegrationBuild (deterministic source paths) via Directory.Build.props
+
+jobs:
+  build-test:
+    # Windows is required: the app targets net10.0-windows + WinUI 3 (Windows App SDK).
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      # Installs the pinned toolchain from mise.toml (dotnet 10.0.300, just) and activates it.
+      - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
+        with:
+          install: true
+          cache: true
+
+      # Enforce the committed lockfiles (fails closed if packages.lock.json drifts).
+      - name: Restore (locked)
+        run: mise exec -- just restore-locked
+
+      - name: Format check
+        run: mise exec -- just format-check
+
+      - name: Spell check
+        run: mise exec -- just typos
+
+      - name: Lint (analyzers, warnings as errors)
+        run: mise exec -- just lint
+
+      - name: Test
+        run: mise exec -- just test
+
+      - name: Dependency vulnerability audit
+        run: mise exec -- just vuln

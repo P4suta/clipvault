@@ -1,0 +1,94 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{json,yml,yaml,xml,csproj,props,targets,manifest,appxmanifest}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.cs]
+# Modern C# conventions (readability-focused; severity capped at warning so the build is not broken here).
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_prefer_braces = true:suggestion
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_style_prefer_primary_constructors = true:suggestion
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
+dotnet_style_readonly_field = true:warning
+dotnet_sort_system_directives_first = true
+dotnet_style_namespace_match_folder = true:suggestion
+# Place using directives outside the namespace.
+csharp_using_directive_placement = outside_namespace:warning
+
+# ===== Suppress only rules that are genuinely unfit for this app (everything else is fixed in code). =====
+# ConfigureAwait is not used (by design: WinRT/UI-thread affinity requires resuming on the UI thread).
+dotnet_diagnostic.CA2007.severity = none
+dotnet_diagnostic.VSTHRD111.severity = none
+dotnet_diagnostic.MA0004.severity = none
+# With NRT enabled, null-checking public arguments (CA1062) is redundant (the compiler guarantees it).
+dotnet_diagnostic.CA1062.severity = none
+# Clean architecture needs public types across layers; do not internalize just because this is an app (CA1515).
+dotnet_diagnostic.CA1515.severity = none
+# Concrete types created by the DI container look unused to static analysis (CA1812 false positive).
+dotnet_diagnostic.CA1812.severity = none
+# Exclusion-list names like "1password"/"lastpass"/"keepass" are app names, not credentials (S2068 false positive).
+dotnet_diagnostic.S2068.severity = none
+# byte[] is the domain representation of binary content; ReadOnlyMemory would ripple through crypto/interop for little gain (CA1819).
+dotnet_diagnostic.CA1819.severity = none
+
+# ----- StyleCop: disable only rules that conflict with this codebase's conventions. -----
+# This codebase does not use the this. prefix.
+dotnet_diagnostic.SA1101.severity = none
+# Private fields use the _camelCase (underscore-prefixed) convention.
+dotnet_diagnostic.SA1309.severity = none
+# File header comments are not used.
+dotnet_diagnostic.SA1633.severity = none
+# Doc "presence" is owned by CS1591; disable the StyleCop presence rules to avoid duplicate reports.
+# The content/wording rules (SA1611/1615/1618/1623/1642/1643, etc.) stay ON, so docs are still fully enforced.
+dotnet_diagnostic.SA1600.severity = none
+dotnet_diagnostic.SA1601.severity = none
+dotnet_diagnostic.SA1602.severity = none
+
+# ===== Generated code: excluded from strict analysis (CsWin32 / XAML / CommunityToolkit.Mvvm / GeneratedRegex). =====
+[*.g.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none
+# CS1591/CS1573 are compiler warnings, not silenced by the analyzer severity above; disable them explicitly for generated code.
+dotnet_diagnostic.CS1591.severity = none
+dotnet_diagnostic.CS1573.severity = none
+
+[*.g.i.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none
+# CS1591/CS1573 are compiler warnings, not silenced by the analyzer severity above; disable them explicitly for generated code.
+dotnet_diagnostic.CS1591.severity = none
+dotnet_diagnostic.CS1573.severity = none
+
+[*.Designer.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none
+# CS1591/CS1573 are compiler warnings, not silenced by the analyzer severity above; disable them explicitly for generated code.
+dotnet_diagnostic.CS1591.severity = none
+dotnet_diagnostic.CS1573.severity = none
+
+# ===== Test projects: relax rules that are noisy with xUnit. =====
+[tests/**/*.cs]
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CS1591.severity = none
+dotnet_diagnostic.CA1812.severity = none
+dotnet_diagnostic.CA1031.severity = none
+dotnet_diagnostic.MA0040.severity = none
+dotnet_diagnostic.CA2000.severity = suggestion
+# Test data is generated with a fixed-seed System.Random for determinism; cryptographic RNG is not wanted here.
+dotnet_diagnostic.CA5394.severity = none
+# Static [MemberData] providers and static helpers are conventionally placed after the test methods.
+dotnet_diagnostic.SA1204.severity = none

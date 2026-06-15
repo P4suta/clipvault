@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Window
+    x:Class="ClipVaultApp.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:loc="using:ClipVaultApp.Localization"
+    xmlns:local="using:ClipVaultApp"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:ClipVaultApp.ViewModels"
+    Title="ClipVault"
+    mc:Ignorable="d">
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid KeyDown="OnRootKeyDown">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TitleBar x:Name="AppTitleBar" Title="ClipVault">
+            <TitleBar.IconSource>
+                <ImageIconSource ImageSource="Assets/AppIcon.ico" />
+            </TitleBar.IconSource>
+        </TitleBar>
+
+        <!--  操作バー: 検索 / 一時停止 / すべて消去  -->
+        <Grid
+            Grid.Row="1"
+            Padding="16,12"
+            ColumnSpacing="8"
+            Visibility="{x:Bind local:MainWindow.BoolToVisibilityInverse(ViewModel.IsDetailOpen), Mode=OneWay}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBox
+                x:Name="SearchBox"
+                Grid.Column="0"
+                AutomationProperties.AutomationId="SearchBox"
+                AutomationProperties.Name="{loc:Str Key=Main.Search.Placeholder}"
+                PlaceholderText="{loc:Str Key=Main.Search.Placeholder}"
+                Text="{x:Bind ViewModel.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+            <ToggleButton
+                x:Name="PauseButton"
+                Grid.Column="1"
+                MinWidth="40"
+                AutomationProperties.AutomationId="PauseButton"
+                AutomationProperties.Name="{loc:Str Key=Main.Pause.Name}"
+                IsChecked="{x:Bind ViewModel.IsPaused, Mode=TwoWay}"
+                ToolTipService.ToolTip="{loc:Str Key=Main.Pause.Name}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon FontSize="16" Glyph="&#xE769;" />
+                    <TextBlock Text="{loc:Str Key=Main.Pause.Label}" />
+                </StackPanel>
+            </ToggleButton>
+
+            <Button
+                x:Name="ClearAllButton"
+                Grid.Column="2"
+                MinWidth="40"
+                AutomationProperties.AutomationId="ClearAllButton"
+                AutomationProperties.Name="{loc:Str Key=Main.ClearAll.Name}"
+                Command="{x:Bind ViewModel.ClearAllCommand}"
+                ToolTipService.ToolTip="{loc:Str Key=Main.ClearAll.Tooltip}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon FontSize="16" Glyph="&#xE74D;" />
+                    <TextBlock Text="{loc:Str Key=Main.ClearAll.Name}" />
+                </StackPanel>
+            </Button>
+
+            <Button
+                x:Name="SettingsButton"
+                Grid.Column="3"
+                MinWidth="40"
+                AutomationProperties.AutomationId="SettingsButton"
+                AutomationProperties.Name="{loc:Str Key=Main.Settings.Name}"
+                Click="OnSettingsClick"
+                ToolTipService.ToolTip="{loc:Str Key=Main.Settings.Tooltip}">
+                <FontIcon FontSize="16" Glyph="&#xE713;" />
+            </Button>
+        </Grid>
+
+        <!--  履歴一覧  -->
+        <Grid Grid.Row="2">
+            <ListView
+                x:Name="HistoryList"
+                Padding="8,0,8,8"
+                AutomationProperties.AutomationId="HistoryList"
+                AutomationProperties.Name="{loc:Str Key=Main.HistoryList.Name}"
+                IsItemClickEnabled="True"
+                ItemClick="OnItemClick"
+                ItemsSource="{x:Bind ViewModel.Entries, Mode=OneWay}"
+                KeyDown="OnHistoryListKeyDown"
+                SelectionMode="Single"
+                Visibility="{x:Bind local:MainWindow.BoolToVisibilityInverse(ViewModel.IsDetailOpen), Mode=OneWay}">
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Padding" Value="12,8" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:EntryViewModel">
+                        <Grid ColumnSpacing="12" Loaded="OnEntryRowLoaded">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <!--  サムネイル（画像）またはグリフ（テキスト）  -->
+                            <Grid
+                                Grid.Column="0"
+                                Width="40"
+                                Height="40"
+                                VerticalAlignment="Top">
+                                <Border
+                                    Background="{ThemeResource ControlFillColorSecondaryBrush}"
+                                    CornerRadius="{StaticResource ControlCornerRadius}"
+                                    Visibility="{x:Bind local:MainWindow.BoolToVisibility(IsText)}">
+                                    <FontIcon
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="18"
+                                        Glyph="&#xE8C8;" />
+                                </Border>
+                                <Image
+                                    AutomationProperties.Name="{loc:Str Key=Main.Thumbnail.Name}"
+                                    Source="{x:Bind Thumbnail, Mode=OneWay}"
+                                    Stretch="UniformToFill"
+                                    Visibility="{x:Bind local:MainWindow.BoolToVisibility(IsImage)}" />
+                            </Grid>
+
+                            <!--  プレビュー + 発生元/時刻  -->
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock
+                                    MaxLines="2"
+                                    Text="{x:Bind Preview}"
+                                    TextTrimming="CharacterEllipsis"
+                                    TextWrapping="Wrap" />
+                                <TextBlock
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Style="{StaticResource CaptionTextBlockStyle}">
+                                    <Run Text="{x:Bind SourceName}" /><Run Text=" · " /><Run Text="{x:Bind Timestamp}" />
+                                </TextBlock>
+                            </StackPanel>
+
+                            <!--  ピン / 削除  -->
+                            <StackPanel
+                                Grid.Column="2"
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal"
+                                Spacing="4">
+                                <Button
+                                    AutomationProperties.AutomationId="ViewButton"
+                                    AutomationProperties.Name="{loc:Str Key=Main.ViewFull.Name}"
+                                    Command="{x:Bind local:MainWindow.ViewDetailCommand}"
+                                    CommandParameter="{x:Bind}"
+                                    Style="{StaticResource SubtleButtonStyle}"
+                                    ToolTipService.ToolTip="{loc:Str Key=Main.ViewFull.Name}">
+                                    <FontIcon FontSize="16" Glyph="&#xE890;" />
+                                </Button>
+                                <Button
+                                    AutomationProperties.AutomationId="PinButton"
+                                    AutomationProperties.Name="{loc:Str Key=Main.TogglePin.Name}"
+                                    Command="{x:Bind local:MainWindow.TogglePinCommand}"
+                                    CommandParameter="{x:Bind}"
+                                    Style="{StaticResource SubtleButtonStyle}"
+                                    ToolTipService.ToolTip="{loc:Str Key=Main.TogglePin.Name}">
+                                    <FontIcon
+                                        FontSize="16"
+                                        Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                        Glyph="{x:Bind local:MainWindow.PinGlyph(IsPinned)}" />
+                                </Button>
+                                <Button
+                                    AutomationProperties.AutomationId="DeleteButton"
+                                    AutomationProperties.Name="{loc:Str Key=Main.Delete.Name}"
+                                    Command="{x:Bind local:MainWindow.DeleteCommand}"
+                                    CommandParameter="{x:Bind}"
+                                    Style="{StaticResource SubtleButtonStyle}"
+                                    ToolTipService.ToolTip="{loc:Str Key=Main.Delete.Tooltip}">
+                                    <FontIcon FontSize="16" Glyph="&#xE74D;" />
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <!--  空状態  -->
+            <StackPanel
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Spacing="8"
+                Visibility="{x:Bind local:MainWindow.BoolToVisibility(ViewModel.IsEmpty), Mode=OneWay}">
+                <FontIcon
+                    HorizontalAlignment="Center"
+                    FontSize="40"
+                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                    Glyph="&#xE8C8;" />
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                    Text="{loc:Str Key=Main.Empty.Title}" />
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    Text="{loc:Str Key=Main.Empty.Subtitle}" />
+            </StackPanel>
+
+            <!--  全文表示（読み取り専用・同一画面のインライン切替）  -->
+            <Grid
+                Padding="16,12"
+                RowSpacing="12"
+                Visibility="{x:Bind local:MainWindow.BoolToVisibility(ViewModel.IsDetailOpen), Mode=OneWay}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <StackPanel
+                    Grid.Row="0"
+                    Orientation="Horizontal"
+                    Spacing="8">
+                    <Button
+                        AutomationProperties.Name="{loc:Str Key=Main.Detail.Back.Name}"
+                        Command="{x:Bind ViewModel.CloseDetailCommand}"
+                        Style="{StaticResource SubtleButtonStyle}"
+                        ToolTipService.ToolTip="{loc:Str Key=Main.Detail.Back.Name}">
+                        <FontIcon FontSize="16" Glyph="&#xE72B;" />
+                    </Button>
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Style="{StaticResource BodyStrongTextBlockStyle}"
+                        Text="{x:Bind ViewModel.DetailTitle, Mode=OneWay}"
+                        TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+
+                <TextBox
+                    Grid.Row="1"
+                    AcceptsReturn="True"
+                    AutomationProperties.Name="{loc:Str Key=Main.Detail.FullText.Name}"
+                    IsReadOnly="True"
+                    IsSpellCheckEnabled="False"
+                    ScrollViewer.VerticalScrollBarVisibility="Auto"
+                    Text="{x:Bind ViewModel.DetailText, Mode=OneWay}"
+                    TextWrapping="Wrap"
+                    Visibility="{x:Bind local:MainWindow.BoolToVisibilityInverse(ViewModel.DetailIsImage), Mode=OneWay}" />
+
+                <ScrollViewer
+                    Grid.Row="1"
+                    HorizontalScrollBarVisibility="Auto"
+                    Visibility="{x:Bind local:MainWindow.BoolToVisibility(ViewModel.DetailIsImage), Mode=OneWay}">
+                    <Image
+                        AutomationProperties.Name="{loc:Str Key=Main.Detail.Image.Name}"
+                        Source="{x:Bind ViewModel.DetailImageSource, Mode=OneWay}"
+                        Stretch="Uniform" />
+                </ScrollViewer>
+
+                <Button
+                    Grid.Row="2"
+                    HorizontalAlignment="Right"
+                    Command="{x:Bind ViewModel.CopyDetailCommand}"
+                    Style="{StaticResource AccentButtonStyle}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontSize="16" Glyph="&#xE8C8;" />
+                        <TextBlock Text="{loc:Str Key=Main.Detail.Copy}" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

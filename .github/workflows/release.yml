@@ -1,0 +1,114 @@
+# Release pipeline: build the self-contained app, generate an SBOM, (optionally) code-sign, then
+# bind SLSA build provenance + the SBOM to the binary and publish a GitHub Release.
+#
+# Trust model: even while the binary is UNSIGNED, every release carries cryptographic provenance
+# (Sigstore-backed, keyless) that anyone can verify with `gh attestation verify`. Code signing is a
+# dormant step that activates automatically once the SSL.com eSigner (ES_*) secrets are configured;
+# it runs before staging/attestation, so provenance then binds to the signed binary with no rework.
+name: release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write # create the GitHub Release and upload assets
+  id-token: write # OIDC token used to sign the attestations (Sigstore)
+  attestations: write # write build-provenance + SBOM attestations to the repo
+
+env:
+  CI: "true"
+  # Surfaced at job scope so the signing step's `if:` can detect whether signing is configured.
+  # (Secrets cannot be read directly in an `if:`; an env var derived from a secret can.)
+  ES_USERNAME: ${{ secrets.ES_USERNAME }}
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
+        with:
+          install: true
+          cache: true
+
+      # The git tag is the single source of truth for the version (no Version property in the repo).
+      - name: Derive version from tag
+        id: ver
+        shell: bash
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      # Validate lockfile integrity for the standard graph before building.
+      - name: Restore (locked)
+        run: mise exec -- just restore-locked
+
+      # Self-contained x64 publish with the version injected from the tag.
+      - name: Publish self-contained (x64)
+        shell: bash
+        run: |
+          mise exec -- dotnet publish src/ClipVault.App/ClipVault.App.csproj \
+            -c Release -p:Platform=x64 --self-contained \
+            -p:Version=${{ steps.ver.outputs.version }} \
+            -o artifacts/publish/win-x64
+
+      - name: Generate SBOM
+        run: mise exec -- just sbom ${{ steps.ver.outputs.version }}
+
+      # Dormant until the SSL.com eSigner secrets exist. Signs in place so the staged zip and the
+      # attestation subjects below are the SIGNED binary. environment_name=PROD for a real cert.
+      - name: Code sign (SSL.com eSigner) — skipped until ES_* secrets are set
+        if: ${{ env.ES_USERNAME != '' }}
+        uses: sslcom/esigner-codesign@cf5f6c1d38ad10f47e3ed9aca873f429b1a8d85b # v1.3.2
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: ${{ github.workspace }}/artifacts/publish/win-x64/ClipVault.App.exe
+          override: "true"
+          malware_block: "false"
+          environment_name: "PROD"
+
+      - name: Stage release assets (zips + SBOM + checksums)
+        id: stage
+        shell: bash
+        run: |
+          set -euo pipefail
+          v="${{ steps.ver.outputs.version }}"
+          out="artifacts/publish/win-x64"
+          mkdir -p artifacts/release
+          # Runtime zip (everything except PDBs) and a separate symbols zip.
+          ( cd "$out" && 7z a -tzip '-x!*.pdb' "$GITHUB_WORKSPACE/artifacts/release/ClipVault-$v-win-x64.zip" . >/dev/null )
+          ( cd "$out" && 7z a -tzip "$GITHUB_WORKSPACE/artifacts/release/ClipVault-$v-win-x64-symbols.zip" '*.pdb' >/dev/null )
+          cp artifacts/sbom/clipvault.cdx.json artifacts/release/
+          ( cd artifacts/release && sha256sum * > SHA256SUMS.txt )
+          echo "Staged:"; ls -la artifacts/release
+
+      # SLSA build provenance, bound to both the raw exe and the distributed zip.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-path: |
+            artifacts/publish/win-x64/ClipVault.App.exe
+            artifacts/release/ClipVault-${{ steps.ver.outputs.version }}-win-x64.zip
+
+      # Bind the CycloneDX SBOM to the application binary.
+      - name: Attest SBOM
+        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3
+        with:
+          subject-path: artifacts/publish/win-x64/ClipVault.App.exe
+          sbom-path: artifacts/sbom/clipvault.cdx.json
+
+      - name: Create GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "ClipVault ${{ steps.ver.outputs.version }}" \
+            --generate-notes \
+            artifacts/release/*

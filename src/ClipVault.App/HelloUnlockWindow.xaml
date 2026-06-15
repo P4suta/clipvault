@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Window
+    x:Class="ClipVaultApp.HelloUnlockWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:loc="using:ClipVaultApp.Localization"
+    xmlns:local="using:ClipVaultApp"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="ClipVault"
+    mc:Ignorable="d">
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid Padding="24" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Spacing="8">
+            <FontIcon
+                HorizontalAlignment="Left"
+                FontSize="28"
+                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                Glyph="&#xE8FB;" />
+            <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="{loc:Str Key=Unlock.Header}" />
+            <TextBlock
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Style="{StaticResource CaptionTextBlockStyle}"
+                Text="{loc:Str Key=Unlock.Hello.Description}"
+                TextWrapping="Wrap" />
+        </StackPanel>
+
+        <InfoBar
+            x:Name="ErrorBar"
+            Grid.Row="1"
+            AutomationProperties.AutomationId="StartupHelloErrorBar"
+            IsClosable="False"
+            IsOpen="False"
+            Message="{loc:Str Key=Unlock.Hello.Failed}"
+            Severity="Error" />
+
+        <ProgressRing
+            x:Name="BusyRing"
+            Grid.Row="2"
+            Width="20"
+            Height="20"
+            HorizontalAlignment="Left"
+            IsActive="False" />
+
+        <Grid Grid.Row="3" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Button
+                x:Name="QuitButton"
+                Grid.Column="0"
+                HorizontalAlignment="Left"
+                AutomationProperties.AutomationId="StartupHelloQuitButton"
+                AutomationProperties.Name="{loc:Str Key=Unlock.Quit}"
+                Click="OnQuitClick"
+                Content="{loc:Str Key=Unlock.Quit}" />
+
+            <Button
+                x:Name="UnlockButton"
+                Grid.Column="1"
+                MinWidth="160"
+                AutomationProperties.AutomationId="StartupHelloUnlockButton"
+                AutomationProperties.Name="{loc:Str Key=Unlock.Hello.Button}"
+                Click="OnUnlockClick"
+                Content="{loc:Str Key=Unlock.Hello.Button}"
+                Style="{StaticResource AccentButtonStyle}" />
+        </Grid>
+    </Grid>
+</Window>

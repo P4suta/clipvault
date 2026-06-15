@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "ClipVault.App (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "ClipVault.App (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

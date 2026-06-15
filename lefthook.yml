@@ -1,0 +1,16 @@
+# Git hooks managed by lefthook (installed via `mise exec -- lefthook install`).
+# pre-commit: verify whitespace formatting, spell-check, then run analyzers with warnings as errors.
+# pre-push:   run the full test suite.
+# Use `--no-verify` to skip in an emergency. CI does not rely on these hooks; it runs `just check` directly.
+pre-commit:
+  commands:
+    format-check:
+      run: just format-check
+    typos:
+      run: just typos
+    lint:
+      run: just lint
+pre-push:
+  commands:
+    test:
+      run: just test

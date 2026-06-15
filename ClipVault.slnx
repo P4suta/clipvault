@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ClipVault.App/ClipVault.App.csproj" />
+    <Project Path="src/ClipVault.Application/ClipVault.Application.csproj" />
+    <Project Path="src/ClipVault.Domain/ClipVault.Domain.csproj" />
+    <Project Path="src/ClipVault.Infrastructure/ClipVault.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ClipVault.App.Tests/ClipVault.App.Tests.csproj" />
+    <Project Path="tests/ClipVault.Application.Tests/ClipVault.Application.Tests.csproj" />
+    <Project Path="tests/ClipVault.Domain.Tests/ClipVault.Domain.Tests.csproj" />
+    <Project Path="tests/ClipVault.Infrastructure.Tests/ClipVault.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>

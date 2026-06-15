@@ -1,0 +1,12 @@
+# Build outputs (consolidated by the Artifacts Output Layout)
+artifacts/
+
+# Fallback in case a project emits locally
+[Bb]in/
+[Oo]bj/
+dist/
+
+# IDE / OS
+.vs/
+*.user
+.DS_Store

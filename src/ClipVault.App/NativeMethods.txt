@@ -1,0 +1,48 @@
+// CsWin32 生成対象。トレイ常駐・ホットキー・自動貼り戻し・ウィンドウサブクラスに必要な
+// Win32 API / 構造体 / 列挙 / 定数のみを列挙する（CsWin32 のコメントは "//"）。
+// --- 関数 ---
+Shell_NotifyIcon
+SetWindowSubclass
+RemoveWindowSubclass
+DefSubclassProc
+GetForegroundWindow
+SetForegroundWindow
+SendInput
+CreatePopupMenu
+AppendMenu
+TrackPopupMenuEx
+DestroyMenu
+LoadImage
+DestroyIcon
+GetCursorPos
+GetWindowThreadProcessId
+AttachThreadInput
+GetCurrentThreadId
+PostMessage
+SetWindowsHookEx
+CallNextHookEx
+UnhookWindowsHookEx
+GetAsyncKeyState
+// --- 構造体 ---
+NOTIFYICONDATAW
+INPUT
+KBDLLHOOKSTRUCT
+// --- 列挙（定数は属する列挙名で要求し、コードは列挙メンバを使う＝PInvoke004 回避）---
+HOT_KEY_MODIFIERS
+VIRTUAL_KEY
+NOTIFY_ICON_MESSAGE
+NOTIFY_ICON_DATA_FLAGS
+TRACK_POPUP_MENU_FLAGS
+MENU_ITEM_FLAGS
+GDI_IMAGE_TYPE
+IMAGE_FLAGS
+WINDOWS_HOOK_ID
+KBDLLHOOKSTRUCT_FLAGS
+// --- 定数（列挙に属さないメッセージ等）---
+WM_APP
+WM_LBUTTONUP
+WM_RBUTTONUP
+WM_NULL
+WM_KEYDOWN
+WM_SYSKEYDOWN
+NOTIFYICON_VERSION_4

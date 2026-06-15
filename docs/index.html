@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ClipVault — a privacy-first clipboard manager for Windows</title>
+  <meta name="description" content="ClipVault is a privacy-first clipboard history manager for Windows: encrypted at rest, optional RAM-only mode, secret-aware capture, and verifiable releases." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #1a1d21;
+      --muted: #586069;
+      --border: #e5e7eb;
+      --accent: #0f766e;
+      --code-bg: #f3f4f6;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117;
+        --fg: #e6edf3;
+        --muted: #9aa4af;
+        --border: #21262d;
+        --accent: #2dd4bf;
+        --code-bg: #161b22;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 56px 20px 72px; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+    header svg { width: 44px; height: 44px; color: var(--accent); flex: none; }
+    h1 { font-size: 30px; margin: 0; letter-spacing: -0.01em; }
+    .tagline { color: var(--muted); margin: 0 0 28px; font-size: 18px; }
+    h2 { font-size: 18px; margin: 36px 0 12px; }
+    p { margin: 0 0 14px; }
+    ul { margin: 0; padding: 0; list-style: none; }
+    li { margin: 0 0 12px; padding-left: 18px; position: relative; }
+    li::before { content: "—"; position: absolute; left: 0; color: var(--muted); }
+    li b { font-weight: 600; }
+    code {
+      background: var(--code-bg); border: 1px solid var(--border);
+      border-radius: 4px; padding: 1px 5px; font-size: 0.9em;
+      font-family: "Segoe UI Mono", SFMono-Regular, Consolas, monospace;
+    }
+    .links { display: flex; flex-wrap: wrap; gap: 10px 20px; margin-top: 8px; }
+    footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect width="8" height="4" x="8" y="2" rx="1" />
+        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+        <path d="M9 14l2 2 4-4" />
+      </svg>
+      <h1>ClipVault</h1>
+    </header>
+    <p class="tagline">A privacy-first clipboard history manager for Windows.</p>
+
+    <p>ClipVault keeps a searchable history of what you copy, encrypts it at rest, and leaves no persistent system footprint.</p>
+
+    <h2>Features</h2>
+    <ul>
+      <li><b>Encrypted at rest</b> — clipboard content is encrypted per-field with ChaCha20-Poly1305. The master key is sealed with Windows DPAPI and can require a passphrase (Argon2id) or Windows Hello.</li>
+      <li><b>Volatile mode</b> — optionally keep the entire history in RAM only; nothing touches the disk.</li>
+      <li><b>Privacy gate</b> — API keys, JWTs, private keys, card numbers, and passwords are rejected or masked before they are stored. The OS "exclude from clipboard history" signal is honored, and you can exclude specific apps.</li>
+      <li><b>Lightweight &amp; install-free</b> — an unpackaged, self-contained <code>.exe</code>; tray-resident; summon with a global hotkey. OS registrations are runtime-only and released on exit.</li>
+    </ul>
+
+    <h2>Security</h2>
+    <p>The history is encrypted per-field with ChaCha20-Poly1305 (AEAD); the master key is sealed with DPAPI and can require a passphrase or Windows Hello. Deleting the key file (panic wipe) renders all ciphertext unrecoverable. <a href="https://github.com/OWNER/REPO/blob/main/SECURITY.md">Security model &rarr;</a></p>
+
+    <h2>Verifiable releases</h2>
+    <p>Every release carries SLSA build provenance and an attested CycloneDX SBOM, verifiable with <code>gh attestation verify</code> &mdash; even before the binary is code-signed. <a href="https://github.com/OWNER/REPO/blob/main/docs/VERIFICATION.md">Verifying releases &rarr;</a></p>
+
+    <h2>Links</h2>
+    <div class="links">
+      <a href="https://github.com/OWNER/REPO">GitHub repository</a>
+      <a href="https://github.com/OWNER/REPO/releases">Releases</a>
+      <a href="https://github.com/OWNER/REPO/blob/main/SECURITY.md">Security policy</a>
+      <a href="https://github.com/OWNER/REPO/blob/main/docs/VERIFICATION.md">Verifying releases</a>
+    </div>
+
+    <footer>ClipVault &middot; .NET 10 &middot; WinUI 3 &middot; Windows x64</footer>
+  </main>
+</body>
+</html>
