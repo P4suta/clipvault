@@ -457,6 +457,13 @@
                                         Style="{StaticResource BodyStrongTextBlockStyle}"
                                         Text="{x:Bind ViewModel.ProtectionDisplay, Mode=OneWay}" />
                                 </Grid>
+                                <TextBlock
+                                    AutomationProperties.AutomationId="PrivacyPendingHint"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Text="{loc:Str Key=Settings.Privacy.Pending}"
+                                    TextWrapping="Wrap"
+                                    Visibility="{x:Bind local:SettingsWindow.BoolToVisibility(ViewModel.IsStorageRestartPending), Mode=OneWay}" />
                             </StackPanel>
                         </Border>
 
@@ -514,7 +521,27 @@
                                             Grid.Column="1"
                                             MaxWidth="640"
                                             HorizontalAlignment="Left"
-                                            Text="{loc:Str Key=Settings.Privacy.Crypto}"
+                                            AutomationProperties.AutomationId="PrivacyGuaranteeDisplay"
+                                            Text="{x:Bind ViewModel.AtRestGuarantee, Mode=OneWay}"
+                                            TextWrapping="Wrap" />
+                                    </Grid>
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon
+                                            VerticalAlignment="Top"
+                                            FontSize="16"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Glyph="&#xE946;" />
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            MaxWidth="640"
+                                            HorizontalAlignment="Left"
+                                            AutomationProperties.AutomationId="PrivacyExtraDisplay"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Text="{x:Bind ViewModel.ExtraProtection, Mode=OneWay}"
                                             TextWrapping="Wrap" />
                                     </Grid>
                                 </StackPanel>

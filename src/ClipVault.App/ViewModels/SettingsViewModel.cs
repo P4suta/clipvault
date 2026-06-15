@@ -96,6 +96,18 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial string ProtectionDisplay { get; private set; } = string.Empty;
 
+    /// <summary>Gets the privacy-panel guarantee text scoped to the running mode (volatile / DPAPI / passphrase / Hello).</summary>
+    [ObservableProperty]
+    public partial string AtRestGuarantee { get; private set; } = string.Empty;
+
+    /// <summary>Gets the privacy-panel "additional safeguards" text: the extra protection that is enabled, or can be enabled, for the running mode.</summary>
+    [ObservableProperty]
+    public partial string ExtraProtection { get; private set; } = string.Empty;
+
+    /// <summary>Gets a value indicating whether a storage-mode change is selected but not yet applied (it takes effect on the next restart).</summary>
+    [ObservableProperty]
+    public partial bool IsStorageRestartPending { get; private set; }
+
     /// <summary>Gets a value indicating whether the protection UI (passphrase / Hello) is shown; it is hidden entirely in volatile mode.</summary>
     [ObservableProperty]
     public partial bool IsPassphraseSectionVisible { get; private set; }
@@ -286,17 +298,18 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
     }
 
-    /// <summary>Re-reads the vault protection state and refreshes the display.</summary>
+    /// <summary>
+    /// Re-reads the vault protection state and refreshes the privacy/protection display. Everything here reflects the
+    /// CURRENT running session: a storage-mode change only takes effect on restart, so the display follows the active
+    /// protection (not the pending setting), and a pending change is surfaced via <see cref="IsStorageRestartPending"/>.
+    /// </summary>
     private void RefreshProtection()
     {
-        StorageDisplay = _settings.Current.Storage switch
-        {
-            StorageMode.EncryptedDisk => _loc.GetString("Settings.StorageDisplay.Encrypted"),
-            StorageMode.VolatileMemory => _loc.GetString("Settings.StorageDisplay.Volatile"),
-            _ => _loc.GetString("Common.Unknown"),
-        };
-
         var protection = _vault.Protection;
+
+        StorageDisplay = protection == VaultProtection.Volatile
+            ? _loc.GetString("Settings.StorageDisplay.Volatile")
+            : _loc.GetString("Settings.StorageDisplay.Encrypted");
 
         // The protection UI (passphrase / Hello) is hidden entirely in volatile mode.
         IsPassphraseSectionVisible = protection != VaultProtection.Volatile;
@@ -322,6 +335,29 @@ public sealed partial class SettingsViewModel : ObservableObject
             VaultProtection.Volatile => _loc.GetString("Settings.ProtectionDisplay.Volatile"),
             _ => _loc.GetString("Common.Unknown"),
         };
+
+        // The privacy panel's guarantee + "additional safeguards" lines, scoped to the running mode.
+        AtRestGuarantee = protection switch
+        {
+            VaultProtection.DpapiOnly => _loc.GetString("Settings.Privacy.Guarantee.DpapiOnly"),
+            VaultProtection.Passphrase => _loc.GetString("Settings.Privacy.Guarantee.Passphrase"),
+            VaultProtection.Hello => _loc.GetString("Settings.Privacy.Guarantee.Hello"),
+            VaultProtection.Volatile => _loc.GetString("Settings.Privacy.Guarantee.Volatile"),
+            _ => _loc.GetString("Common.Unknown"),
+        };
+
+        ExtraProtection = protection switch
+        {
+            VaultProtection.DpapiOnly => _loc.GetString("Settings.Privacy.Extra.DpapiOnly"),
+            VaultProtection.Passphrase => _loc.GetString("Settings.Privacy.Extra.Passphrase"),
+            VaultProtection.Hello => _loc.GetString("Settings.Privacy.Extra.Hello"),
+            VaultProtection.Volatile => _loc.GetString("Settings.Privacy.Extra.Volatile"),
+            _ => string.Empty,
+        };
+
+        // A storage-mode change is pending when the selected setting differs from the running mode (it applies on restart).
+        IsStorageRestartPending =
+            (_settings.Current.Storage == StorageMode.VolatileMemory) != (protection == VaultProtection.Volatile);
     }
 
     // --- Storage mode two-way sync ---
@@ -356,8 +392,8 @@ public sealed partial class SettingsViewModel : ObservableObject
 
         _settings.Update(_settings.Current with { Storage = mode });
 
-        // The privacy panel's "storage mode" display reflects the saved setting (it actually applies on restart).
-        // Note: encryption Protection depends on the current process's storage setting, so it does not change until restart.
+        // The change applies on restart, so the privacy panel keeps showing the running mode; refresh so the
+        // "pending restart" note (IsStorageRestartPending) appears or clears for the new selection.
         RefreshProtection();
     }
 

@@ -32,14 +32,52 @@ public class SettingsViewModelTests
     }
 
     [Theory]
-    [InlineData(StorageMode.EncryptedDisk, "暗号化ディスク（永続）")]
-    [InlineData(StorageMode.VolatileMemory, "メモリ揮発（ディスクに残さない）")]
-    public void Storage_display_reflects_the_setting(StorageMode mode, string expected)
+    [InlineData(VaultProtection.DpapiOnly, "暗号化ディスク（永続）")]
+    [InlineData(VaultProtection.Passphrase, "暗号化ディスク（永続）")]
+    [InlineData(VaultProtection.Hello, "暗号化ディスク（永続）")]
+    [InlineData(VaultProtection.Volatile, "メモリ揮発（ディスクに残さない）")]
+    public void Storage_display_reflects_the_running_mode(VaultProtection protection, string expected)
+    {
+        var vault = Substitute.For<IVaultManagement>();
+        vault.Protection.Returns(protection);
+
+        Assert.Equal(expected, Build(new InMemorySettingsService(), vault).StorageDisplay);
+    }
+
+    [Theory]
+    [InlineData(VaultProtection.Volatile, StorageMode.VolatileMemory, false)]
+    [InlineData(VaultProtection.Volatile, StorageMode.EncryptedDisk, true)]
+    [InlineData(VaultProtection.DpapiOnly, StorageMode.EncryptedDisk, false)]
+    [InlineData(VaultProtection.DpapiOnly, StorageMode.VolatileMemory, true)]
+    public void Storage_restart_is_pending_when_selection_differs_from_running_mode(
+        VaultProtection running, StorageMode selected, bool expected)
     {
         var settings = new InMemorySettingsService();
-        settings.Update(ClipVaultSettings.Default with { Storage = mode });
+        settings.Update(ClipVaultSettings.Default with { Storage = selected });
+        var vault = Substitute.For<IVaultManagement>();
+        vault.Protection.Returns(running);
 
-        Assert.Equal(expected, Build(settings).StorageDisplay);
+        Assert.Equal(expected, Build(settings, vault).IsStorageRestartPending);
+    }
+
+    [Theory]
+    [InlineData(VaultProtection.Volatile, "Settings.Privacy.Guarantee.Volatile", "Settings.Privacy.Extra.Volatile")]
+    [InlineData(VaultProtection.DpapiOnly, "Settings.Privacy.Guarantee.DpapiOnly", "Settings.Privacy.Extra.DpapiOnly")]
+    [InlineData(VaultProtection.Passphrase, "Settings.Privacy.Guarantee.Passphrase", "Settings.Privacy.Extra.Passphrase")]
+    [InlineData(VaultProtection.Hello, "Settings.Privacy.Guarantee.Hello", "Settings.Privacy.Extra.Hello")]
+    public void Privacy_guarantee_and_extra_reflect_the_running_mode(
+        VaultProtection protection, string guaranteeKey, string extraKey)
+    {
+        var loc = new LocalizationService(AppLanguage.Japanese);
+        var vault = Substitute.For<IVaultManagement>();
+        vault.Protection.Returns(protection);
+
+        var vm = Build(new InMemorySettingsService(), vault);
+
+        Assert.Equal(loc.GetString(guaranteeKey), vm.AtRestGuarantee);
+        Assert.Equal(loc.GetString(extraKey), vm.ExtraProtection);
+        Assert.NotEqual(guaranteeKey, vm.AtRestGuarantee); // Resolved to real copy, not the missing-key fallback.
+        Assert.NotEqual(extraKey, vm.ExtraProtection);
     }
 
     // ---------- Protection ----------
