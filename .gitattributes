@@ -1,0 +1,13 @@
+# Normalize text line endings in the repository; check out native on each platform.
+* text=auto
+
+# Files executed under bash (CI runners, just recipes) must stay LF.
+*.sh text eol=lf
+justfile text eol=lf
+
+# Binary assets: no line-ending conversion, no textual diff.
+*.png binary
+*.ico binary
+*.gz binary
+*.zip binary
+*.pfx binary

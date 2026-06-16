@@ -5,8 +5,6 @@ can confirm a downloaded binary was built by this repository's release workflow 
 though the binary is not yet Authenticode code-signed*. This is the project's current trust model:
 **unsigned, but independently verifiable**.
 
-> Replace `OWNER/REPO` below with the actual repository (e.g. `Yasunobu/clipboard-history`).
-
 ## What you need
 
 - [GitHub CLI](https://cli.github.com/) (`gh`) version 2.x or newer, authenticated (`gh auth login`).
@@ -31,26 +29,37 @@ Provenance is bound to both the distributed `.zip` and the `ClipVault.App.exe` i
 you actually downloaded:
 
 ```bash
-gh attestation verify ClipVault-<version>-win-x64.zip --repo OWNER/REPO
+gh attestation verify ClipVault-<version>-win-x64.zip --repo P4suta/clipboard-history
 ```
 
 For a stricter check, pin the exact workflow identity that is allowed to produce releases:
 
 ```bash
 gh attestation verify ClipVault-<version>-win-x64.zip \
-  --repo OWNER/REPO \
-  --signer-workflow OWNER/REPO/.github/workflows/release.yml
+  --repo P4suta/clipboard-history \
+  --signer-workflow P4suta/clipboard-history/.github/workflows/release.yml
 ```
 
 You can also verify the unpacked executable directly:
 
 ```bash
-gh attestation verify ClipVault.App.exe --repo OWNER/REPO
+gh attestation verify ClipVault.App.exe --repo P4suta/clipboard-history
 ```
 
 A successful run prints the verified provenance predicate (the workflow, commit, and runner that built it).
 Verification validates the Sigstore signature and that the artifact's digest matches the attestation — this is
 the "keyless signing" guarantee that holds with no Authenticode certificate.
+
+**SLSA Build Level.** Releases are built on GitHub-hosted, ephemeral runners, and the provenance is generated
+and signed by GitHub's attestation service — not by the build itself — and bound to the `release.yml` workflow
+identity. This meets **SLSA Build Level 2**, with the Level-3 property that provenance is produced by the build
+platform and is non-falsifiable by the build; the `--signer-workflow` check above is what enforces that identity
+binding.
+
+**Reproducibility.** Compilation is deterministic (`Deterministic` + `ContinuousIntegrationBuild`, portable
+PDBs, embedded source). The self-contained publish is **not** intended to be bit-for-bit reproducible — it runs
+crossgen (ReadyToRun) and bundles the .NET/Windows App SDK runtime, which vary by SDK/runtime patch. Provenance
+(not byte-identical rebuilds) is the integrity guarantee for the shipped binary.
 
 ## 3. Inspect / verify the SBOM
 
@@ -58,7 +67,7 @@ The CycloneDX SBOM is attested against the binary's digest:
 
 ```bash
 gh attestation verify ClipVault.App.exe \
-  --repo OWNER/REPO \
+  --repo P4suta/clipboard-history \
   --predicate-type https://cyclonedx.org/bom
 ```
 

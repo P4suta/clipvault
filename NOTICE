@@ -1,0 +1,8 @@
+ClipVault
+Copyright 2026 Yasunobu (https://github.com/P4suta)
+
+This product is licensed under the Apache License, Version 2.0; see the LICENSE file.
+
+Third-party components and their licenses are enumerated in the CycloneDX SBOM
+(clipvault.cdx.json) attached to each release. See docs/VERIFICATION.md for how to
+inspect and verify it.

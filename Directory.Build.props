@@ -16,6 +16,19 @@
     <UseArtifactsOutput>true</UseArtifactsOutput>
   </PropertyGroup>
 
+  <!-- Project/assembly metadata (flows into the published .exe file properties). -->
+  <PropertyGroup Label="Package metadata">
+    <Product>ClipVault</Product>
+    <Authors>Yasunobu</Authors>
+    <Company>Yasunobu</Company>
+    <Description>Privacy-first clipboard history manager for Windows.</Description>
+    <Copyright>Copyright 2026 Yasunobu</Copyright>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/P4suta/clipboard-history</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/P4suta/clipboard-history</PackageProjectUrl>
+  </PropertyGroup>
+
   <!-- Strict analysis: all analyzers at the highest level, code style enforced at build, warnings as errors. -->
   <PropertyGroup Label="Analysis">
     <EnableNETAnalyzers>true</EnableNETAnalyzers>

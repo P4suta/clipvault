@@ -27,10 +27,14 @@ ClipVault is pre-1.0 and ships from `main`. Security fixes target the latest rel
   second factor:
   - **Passphrase** — the key-encryption key is derived with **Argon2id** (64 MiB, 3 iterations, lanes clamped
     to the CPU count) and wraps the DEK with ChaCha20-Poly1305. The Argon2id parameters are stored inside the
-    DPAPI envelope, so they are integrity-protected and cannot be downgraded.
+    DPAPI envelope, and the key-file version/mode header is bound into the DPAPI entropy, so the protection
+    cannot be silently downgraded nor the parameters tampered.
   - **Windows Hello** — a TPM-backed credential signs a stored challenge; the KEK is derived from the
     signature. The DEK never leaves the device unprotected.
 - **Crypto-erase**: destroying the key file (panic wipe) instantly renders all ciphertext unrecoverable.
+- **Secure delete**: removed or expired entries are deleted with SQLite `secure_delete` (freed pages are zeroed);
+  clearing the history additionally truncates the WAL and `VACUUM`s, so deleted ciphertext does not linger in the
+  database file.
 - **Volatile mode** keeps the entire history in RAM only; nothing is written to disk and everything is lost on
   exit (the strongest privacy posture).
 - **Capture privacy gate**: content is screened before storage. Built-in classifiers reject or mask secrets
@@ -58,9 +62,10 @@ ClipVault is pre-1.0 and ships from `main`. Security fixes target the latest rel
 ## Verifying releases
 
 Every release carries cryptographic **build provenance** (SLSA, via GitHub artifact attestations) and an
-attested **SBOM** (CycloneDX), even when the binary is not yet code-signed. See
-[docs/VERIFICATION.md](docs/VERIFICATION.md) for step-by-step verification with `gh attestation verify` and the
-published `SHA256SUMS.txt`.
+attested **SBOM** (CycloneDX), even when the binary is not yet code-signed. The provenance meets **SLSA Build
+Level 2** (generated and signed by GitHub's attestation service on ephemeral runners, bound to the `release.yml`
+workflow identity). See [docs/VERIFICATION.md](docs/VERIFICATION.md) for step-by-step verification with
+`gh attestation verify` and the published `SHA256SUMS.txt`.
 
 ## Supply-chain controls
 
@@ -69,4 +74,7 @@ published `SHA256SUMS.txt`.
   defense).
 - CI runs analyzers (warnings as errors), tests, a dependency vulnerability audit, and CodeQL. Dependabot keeps
   dependencies and SHA-pinned GitHub Actions current.
-- Release artifacts get SLSA build-provenance and SBOM attestations bound to the binary's digest.
+- Release artifacts get SLSA build-provenance and SBOM attestations bound to the binary's digest; the release
+  workflow verifies its own attestations before publishing.
+- Releases are cut from `v*.*.*` tags; `main` is protected and requires CI + CodeQL to pass. Signed tags and
+  branch protection gate who can trigger a release (the `--signer-workflow` check anchors trust to this workflow).

@@ -1,0 +1,15 @@
+# Default owner for everything in the repo.
+* @P4suta
+
+# Security- and release-trust-critical paths (the `--signer-workflow` verification trusts these).
+/.github/ @P4suta
+/.github/workflows/ @P4suta
+/nuget.config @P4suta
+/Directory.Packages.props @P4suta
+/Directory.Build.props @P4suta
+/Directory.Build.targets @P4suta
+/mise.toml @P4suta
+/mise.lock @P4suta
+/justfile @P4suta
+/BannedSymbols.txt @P4suta
+/src/ClipVault.Infrastructure/Security/ @P4suta

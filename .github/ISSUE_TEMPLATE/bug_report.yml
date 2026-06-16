@@ -1,0 +1,51 @@
+name: Bug report
+description: Report a reproducible problem in ClipVault.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include clipboard contents, passphrases, or other secrets. For security issues, use private
+        vulnerability reporting instead of this form.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: storage-mode
+    attributes:
+      label: Storage mode
+      options:
+        - Volatile (memory-only)
+        - Encrypted disk (DPAPI only)
+        - Encrypted disk (passphrase)
+        - Encrypted disk (Windows Hello)
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: ClipVault version / commit
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: e.g. Windows 11 23H2 (22631)
+    validations:
+      required: true

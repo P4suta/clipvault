@@ -62,8 +62,8 @@ To verify a download, see **[docs/VERIFICATION.md](docs/VERIFICATION.md)**:
 
 ```bash
 gh attestation verify ClipVault-<version>-win-x64.zip \
-  --repo OWNER/REPO \
-  --signer-workflow OWNER/REPO/.github/workflows/release.yml
+  --repo P4suta/clipboard-history \
+  --signer-workflow P4suta/clipboard-history/.github/workflows/release.yml
 ```
 
 ## Security
@@ -71,6 +71,11 @@ gh attestation verify ClipVault-<version>-win-x64.zip \
 See **[SECURITY.md](SECURITY.md)** for the threat model, the encryption design, accepted limitations, and how
 to privately report a vulnerability.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). By participating you agree to the
+[Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## License
 
-See the repository for license details.
+ClipVault is licensed under the Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
