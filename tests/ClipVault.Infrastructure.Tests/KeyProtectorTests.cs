@@ -286,4 +286,70 @@ public sealed class KeyProtectorTests : IDisposable
 
         Assert.Equal(dek, reader.Unlock("pw"));
     }
+
+    // --- Header authentication: version and mode are bound into the DPAPI entropy ---
+    [Fact]
+    public void Tampered_version_byte_makes_unlock_fail()
+    {
+        var protector = new KeyProtector(_path);
+        protector.CreateNew(passphrase: null);
+        var bytes = File.ReadAllBytes(_path);
+        bytes[4] = 0x7F; // Version byte at offset Magic.Length(4).
+        File.WriteAllBytes(_path, bytes);
+
+        Assert.ThrowsAny<CryptographicException>(() => protector.Unlock(passphrase: null));
+    }
+
+    [Fact]
+    public void Tampered_version_byte_makes_read_mode_fail()
+    {
+        var protector = new KeyProtector(_path, Fast);
+        protector.CreateNew("pw");
+        var bytes = File.ReadAllBytes(_path);
+        bytes[4] = 0x7F;
+        File.WriteAllBytes(_path, bytes);
+
+        Assert.ThrowsAny<CryptographicException>(() => protector.RequiresPassphrase());
+    }
+
+    [Fact]
+    public void Mode_downgrade_on_passphrase_vault_fails_closed()
+    {
+        var protector = new KeyProtector(_path, Fast);
+        protector.CreateNew("pw");
+
+        // Flip mode passphrase(1) -> dpapi(0): the entropy binding makes the unprotect fail instead of
+        // returning the passphrase body's leading bytes as a DEK (no silent second-factor downgrade).
+        var bytes = File.ReadAllBytes(_path);
+        bytes[5] = 0x00; // Mode byte at offset Magic.Length(4) + 1.
+        File.WriteAllBytes(_path, bytes);
+
+        Assert.ThrowsAny<CryptographicException>(() => protector.Unlock(passphrase: null));
+    }
+
+    [Fact]
+    public async Task Mode_downgrade_on_hello_vault_fails_closed()
+    {
+        var protector = new KeyProtector(_path);
+        await protector.CreateNewWithHelloAsync(new FakeWindowsHello([1, 2, 3]));
+
+        var bytes = await File.ReadAllBytesAsync(_path);
+        bytes[5] = 0x00; // Flip Hello(2) -> dpapi(0).
+        await File.WriteAllBytesAsync(_path, bytes);
+
+        Assert.ThrowsAny<CryptographicException>(() => protector.Unlock(passphrase: null));
+    }
+
+    // --- Argon2 parameter sanity bounds (resource guard against a crafted / corrupt file) ---
+    [Theory]
+    [InlineData(2_000_000, 1, 1)] // Memory above 1 GiB.
+    [InlineData(64, 100, 1)] // Iterations above the cap.
+    [InlineData(64, 1, 64)] // Parallelism above the cap.
+    [InlineData(0, 1, 1)] // Zero memory.
+    public void Out_of_range_argon_parameters_are_rejected_without_running_argon(int memKiB, int iterations, int parallelism)
+    {
+        var protector = new KeyProtector(_path, new Argon2Parameters(memKiB, iterations, parallelism));
+
+        Assert.ThrowsAny<CryptographicException>(() => protector.CreateNew("pw"));
+    }
 }

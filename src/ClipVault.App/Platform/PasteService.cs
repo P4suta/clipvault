@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Windows.Win32;
 using Windows.Win32.Foundation;
@@ -78,7 +79,12 @@ internal static class PasteService
         inputs[2] = KeyUp(VIRTUAL_KEY.VK_V);
         inputs[3] = KeyUp(VIRTUAL_KEY.VK_CONTROL);
 
-        PInvoke.SendInput(inputs.AsSpan(), sizeof(INPUT));
+        var inserted = PInvoke.SendInput(inputs.AsSpan(), sizeof(INPUT));
+        if (inserted != (uint)inputs.Length)
+        {
+            // Input can be blocked (UIPI / another app holding the foreground); paste-back is best-effort.
+            Debug.WriteLine($"SendInput inserted {inserted}/{inputs.Length} events; paste-back may be incomplete.");
+        }
     }
 
     private static INPUT KeyDown(VIRTUAL_KEY key) => MakeKey(key, keyUp: false);

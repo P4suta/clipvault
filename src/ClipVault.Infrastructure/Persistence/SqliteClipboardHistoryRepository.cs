@@ -180,6 +180,11 @@ public sealed class SqliteClipboardHistoryRepository : IClipboardHistoryReposito
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = "DELETE FROM entries;";
             await cmd.ExecuteNonQueryAsync(cancellationToken);
+
+            // Truncate the WAL and rebuild the file so freed (zeroed) pages are actually reclaimed, not just freelisted.
+            await using var reclaim = conn.CreateCommand();
+            reclaim.CommandText = "PRAGMA wal_checkpoint(TRUNCATE); VACUUM;";
+            await reclaim.ExecuteNonQueryAsync(cancellationToken);
             return 0;
         },
             cancellationToken);
@@ -187,7 +192,23 @@ public sealed class SqliteClipboardHistoryRepository : IClipboardHistoryReposito
     /// <inheritdoc/>
     public void Dispose()
     {
-        _connection?.Dispose();
+        if (_connection is not null)
+        {
+            // Checkpoint and truncate the WAL on clean exit so no -wal/-shm sidecar keeps recent ciphertext.
+            try
+            {
+                using var checkpoint = _connection.CreateCommand();
+                checkpoint.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
+                checkpoint.ExecuteNonQuery();
+            }
+            catch (SqliteException)
+            {
+                // Best-effort checkpoint during shutdown; closing the connection still flushes the WAL.
+            }
+
+            _connection.Dispose();
+        }
+
         _gate.Dispose();
     }
 
@@ -251,7 +272,8 @@ public sealed class SqliteClipboardHistoryRepository : IClipboardHistoryReposito
 
         await using (var pragma = conn.CreateCommand())
         {
-            pragma.CommandText = "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;";
+            // secure_delete zeroes freed content pages, so deleted/expired ciphertext does not linger in the freelist.
+            pragma.CommandText = "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA secure_delete=ON;";
             await pragma.ExecuteNonQueryAsync(ct);
         }
 

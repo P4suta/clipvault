@@ -1,4 +1,6 @@
 using System;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using Windows.Win32;
 using Windows.Win32.Foundation;
@@ -50,9 +52,9 @@ internal sealed class LowLevelKeyboardHook : IDisposable
 
         _disposed = true;
 
-        if (!_hook.IsNull)
+        if (!_hook.IsNull && !PInvoke.UnhookWindowsHookEx(_hook))
         {
-            PInvoke.UnhookWindowsHookEx(_hook);
+            Debug.WriteLine("UnhookWindowsHookEx returned false.");
         }
 
         // Keep the delegate rooted until after the hook is removed.
@@ -85,6 +87,10 @@ internal sealed class LowLevelKeyboardHook : IDisposable
         },
     };
 
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Runs on the native message pump; an escaping exception would cross the unmanaged boundary.")]
     private unsafe LRESULT HookProc(int nCode, WPARAM wParam, LPARAM lParam)
     {
         if (nCode >= 0)
@@ -99,7 +105,14 @@ internal sealed class LowLevelKeyboardHook : IDisposable
                 {
                     // Mask the Win key so its release does not pop the Start menu, then signal the summon.
                     MaskWinKey();
-                    _onChord();
+                    try
+                    {
+                        _onChord();
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Summon chord handler failed: {ex.GetType().Name}: {ex.Message}");
+                    }
                 }
 
                 // Swallow the event (down and up) so the shell never sees the reserved chord.

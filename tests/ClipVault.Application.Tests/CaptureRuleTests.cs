@@ -210,17 +210,17 @@ public class CaptureRuleTests
     }
 
     [Fact]
-    public void ContentClassificationRule_only_scans_the_beginning()
+    public void ContentClassificationRule_scans_the_entire_text()
     {
         var rule = new ContentClassificationRule([new ApiKeyClassifier()]);
 
-        // A secret that begins past the 4096-char scan window is not detected (documents the current limitation).
-        var hidden = new string('a', 4096) + " sk-abcdefghijklmnopqrstuvwx";
-        Assert.False(rule.Evaluate(Snapshots.Text(hidden)).Rejected);
+        // A secret far past the old 4096-char window is now detected: the full text is scanned.
+        var atEnd = new string('a', 8192) + " sk-abcdefghijklmnopqrstuvwx";
+        Assert.True(rule.Evaluate(Snapshots.Text(atEnd)).Rejected);
 
-        // The same secret within the window is detected.
-        var visible = "sk-abcdefghijklmnopqrstuvwx " + new string('a', 4096);
-        Assert.True(rule.Evaluate(Snapshots.Text(visible)).Rejected);
+        // And one at the very start is still detected.
+        var atStart = "sk-abcdefghijklmnopqrstuvwx " + new string('a', 8192);
+        Assert.True(rule.Evaluate(Snapshots.Text(atStart)).Rejected);
     }
 
     [Fact]

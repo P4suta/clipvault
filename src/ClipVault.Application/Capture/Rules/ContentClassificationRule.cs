@@ -6,12 +6,11 @@ namespace ClipVault.Application.Capture.Rules;
 
 /// <summary>
 /// A safety net that applies the classifiers to text content. If any classifier rejects, the snapshot is discarded
-/// (rejection wins); otherwise the first mask is applied, replacing the content and the preview. Only the beginning is
-/// scanned to keep the cost down.
+/// (rejection wins); otherwise the first mask is applied, replacing the content and the preview. The full text is
+/// scanned (each classifier regex is bounded by a match timeout) so a secret near the end is not missed.
 /// </summary>
 public sealed class ContentClassificationRule(IEnumerable<IClipboardContentClassifier> classifiers) : ICaptureRule
 {
-    private const int MaxScanLength = 4096;
     private readonly IReadOnlyList<IClipboardContentClassifier> _classifiers = classifiers.ToList();
 
     /// <inheritdoc/>
@@ -23,10 +22,9 @@ public sealed class ContentClassificationRule(IEnumerable<IClipboardContentClass
         }
 
         var text = Encoding.UTF8.GetString(snapshot.Payload);
-        var scanText = text.Length > MaxScanLength ? text[..MaxScanLength] : text;
 
         var results = _classifiers
-            .Select(classifier => (classifier.Name, Result: classifier.Classify(scanText)))
+            .Select(classifier => (classifier.Name, Result: classifier.Classify(text)))
             .ToList();
 
         var rejected = results.FirstOrDefault(x => x.Result.Action == ClassificationAction.Reject);

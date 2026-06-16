@@ -89,8 +89,21 @@ public sealed class ChaCha20Poly1305EncryptionService : IEncryptionService, IDis
         var payload = ciphertext[HeaderSize..];
 
         var plaintext = new byte[payload.Length];
-        _aead.Decrypt(nonce, payload, tag, plaintext, associatedData);
-        return plaintext;
+        var ok = false;
+        try
+        {
+            _aead.Decrypt(nonce, payload, tag, plaintext, associatedData);
+            ok = true;
+            return plaintext;
+        }
+        finally
+        {
+            if (!ok)
+            {
+                // On a tampered/invalid ciphertext, never leave a partial plaintext in the abandoned buffer.
+                CryptographicOperations.ZeroMemory(plaintext);
+            }
+        }
     }
 
     /// <inheritdoc/>

@@ -165,6 +165,46 @@ public class SqliteClipboardHistoryRepositoryTests
         Assert.Equal(@"C:\Windows\notepad.exe", got.Source.ExecutablePath);
     }
 
+    [Fact]
+    public async Task Clear_securely_removes_plaintext_from_the_database_files()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "ClipVaultDb_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        var dbPath = Path.Combine(dir, "history.db");
+        const string marker = "TOPSECRET-MARKER-9c3f1a2b5d";
+        try
+        {
+            using (var repo = new SqliteClipboardHistoryRepository(
+                new ClipVaultStorageOptions { DatabasePath = dbPath, KeyFilePath = "unused" },
+                new IdentityEncryptionService()))
+            {
+                await repo.AddAsync(TextEntry("h", "preview", T0), Text(marker));
+                await repo.ClearAsync();
+            }
+
+            // IdentityEncryptionService stores plaintext, so the marker would survive only in a freed (non-zeroed) page.
+            // secure_delete + wal_checkpoint(TRUNCATE) + VACUUM must leave no trace in any database file.
+            var residue = new StringBuilder();
+            foreach (var file in Directory.GetFiles(dir))
+            {
+                residue.Append(Encoding.Latin1.GetString(await File.ReadAllBytesAsync(file)));
+            }
+
+            Assert.DoesNotContain(marker, residue.ToString(), StringComparison.Ordinal);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(dir, recursive: true);
+            }
+            catch (IOException)
+            {
+                // Best effort.
+            }
+        }
+    }
+
     private static SqliteClipboardHistoryRepository NewRepo() =>
         new(
             new ClipVaultStorageOptions { DatabasePath = ":memory:", KeyFilePath = "unused" },
