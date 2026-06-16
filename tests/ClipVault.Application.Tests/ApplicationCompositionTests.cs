@@ -26,6 +26,7 @@ public class ApplicationCompositionTests
                 typeof(SourceAppRule),
                 typeof(CaptureStateRule),
                 typeof(ContentClassificationRule),
+                typeof(UrlCleaningRule),
                 typeof(SizeRule),
             },
             ruleTypes);

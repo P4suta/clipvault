@@ -185,6 +185,10 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool MaskGenericPasswords { get; set; }
 
+    /// <summary>Gets or sets a value indicating whether tracking parameters are stripped from captured URLs.</summary>
+    [ObservableProperty]
+    public partial bool StripTrackingParameters { get; set; }
+
     // --- Retention ---
     // NumberBox.Value is a double, so it is exposed to the UI via double proxies and bridged to the settings (int).
 
@@ -278,6 +282,7 @@ public sealed partial class SettingsViewModel : ObservableObject
                 ?? LanguageOptions[0];
 
             MaskGenericPasswords = current.MaskGenericPasswords;
+            StripTrackingParameters = current.StripTrackingParameters;
             MaxAgeDays = current.MaxAgeDays;
             MaxEntries = current.MaxEntries;
 
@@ -656,6 +661,16 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
 
         _settings.Update(_settings.Current with { MaskGenericPasswords = value });
+    }
+
+    partial void OnStripTrackingParametersChanged(bool value)
+    {
+        if (_isSyncing)
+        {
+            return;
+        }
+
+        _settings.Update(_settings.Current with { StripTrackingParameters = value });
     }
 
     // --- Retention ---

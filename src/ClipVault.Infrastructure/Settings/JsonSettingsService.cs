@@ -93,6 +93,8 @@ public sealed class JsonSettingsService : ISettingsService
 
         public bool MaskGenericPasswords { get; init; }
 
+        public bool StripTrackingParameters { get; init; }
+
         public long MaxImageBytes { get; init; } = 10L * 1024 * 1024;
 
         public int MaxAgeDays { get; init; } = 30;
@@ -108,6 +110,7 @@ public sealed class JsonSettingsService : ISettingsService
             Storage = Enum.TryParse<StorageMode>(Storage, out var mode) ? mode : StorageMode.EncryptedDisk,
             ExcludedProcessNames = new HashSet<string>(ExcludedProcessNames, StringComparer.OrdinalIgnoreCase),
             MaskGenericPasswords = MaskGenericPasswords,
+            StripTrackingParameters = StripTrackingParameters,
             MaxImageBytes = MaxImageBytes,
             MaxAgeDays = MaxAgeDays,
             MaxEntries = MaxEntries,
@@ -120,6 +123,7 @@ public sealed class JsonSettingsService : ISettingsService
             Storage = s.Storage.ToString(),
             ExcludedProcessNames = [.. s.ExcludedProcessNames],
             MaskGenericPasswords = s.MaskGenericPasswords,
+            StripTrackingParameters = s.StripTrackingParameters,
             MaxImageBytes = s.MaxImageBytes,
             MaxAgeDays = s.MaxAgeDays,
             MaxEntries = s.MaxEntries,

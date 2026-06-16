@@ -334,6 +334,30 @@
                             </Grid>
                         </Border>
 
+                        <!--  URL の追跡パラメータ除去  -->
+                        <Border Style="{StaticResource SettingsSectionStyle}">
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Spacing="4">
+                                    <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="{loc:Str Key=Settings.StripTracking.Header}" />
+                                    <TextBlock
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        Text="{loc:Str Key=Settings.StripTracking.Hint}"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ToggleSwitch
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    AutomationProperties.AutomationId="StripTrackingToggle"
+                                    AutomationProperties.Name="{loc:Str Key=Settings.StripTracking.Header}"
+                                    IsOn="{x:Bind ViewModel.StripTrackingParameters, Mode=TwoWay}" />
+                            </Grid>
+                        </Border>
+
                         <!--  保持  -->
                         <Border Style="{StaticResource SettingsSectionStyle}">
                             <StackPanel Spacing="12">

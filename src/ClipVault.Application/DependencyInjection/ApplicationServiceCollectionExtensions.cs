@@ -40,6 +40,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddSingleton<ICaptureRule, SourceAppRule>();
         services.AddSingleton<ICaptureRule, CaptureStateRule>();
         services.AddSingleton<ICaptureRule, ContentClassificationRule>();
+        services.AddSingleton<ICaptureRule, UrlCleaningRule>();
         services.AddSingleton<ICaptureRule, SizeRule>();
         services.AddSingleton<CaptureGate>();
 

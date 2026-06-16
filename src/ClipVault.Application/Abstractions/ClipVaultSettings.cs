@@ -28,6 +28,9 @@ public sealed record ClipVaultSettings
     /// <summary>Gets a value indicating whether strings that look like generic passwords are masked (off by default because of frequent false positives).</summary>
     public bool MaskGenericPasswords { get; init; }
 
+    /// <summary>Gets a value indicating whether tracking parameters (utm_, fbclid, ...) are stripped from captured URLs (off by default; opt-in).</summary>
+    public bool StripTrackingParameters { get; init; }
+
     /// <summary>Gets the maximum number of bytes for a captured image (anything larger is discarded).</summary>
     public long MaxImageBytes { get; init; } = 10L * 1024 * 1024;
 
