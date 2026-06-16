@@ -1,0 +1,14 @@
+# Banned APIs in production code (RS0030). Format: <docId>;<message>
+P:System.DateTime.Now;Use IClock / DateTimeOffset for time.
+P:System.DateTime.UtcNow;Use IClock / DateTimeOffset for testable time.
+P:System.DateTime.Today;Use IClock / DateTimeOffset for time.
+T:System.Random;Use System.Security.Cryptography.RandomNumberGenerator.
+T:System.Console;ClipVault has no console UI; use Debug/tracing.
+P:System.Text.Encoding.Default;Encode with an explicit UTF-8 encoding.
+T:System.Security.Cryptography.MD5;Weak hash; use SHA-256 or better.
+T:System.Security.Cryptography.SHA1;Weak hash; use SHA-256 or better.
+T:System.Security.Cryptography.DES;Weak cipher; use AES / ChaCha20-Poly1305.
+T:System.Security.Cryptography.TripleDES;Weak cipher; use AES / ChaCha20-Poly1305.
+T:System.Security.Cryptography.RC2;Weak cipher; use AES / ChaCha20-Poly1305.
+P:System.Threading.Tasks.Task`1.Result;Await the task instead of blocking on .Result.
+M:System.Threading.Tasks.Task.Wait;Await the task instead of blocking with Wait().

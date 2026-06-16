@@ -57,8 +57,7 @@ public static class InfrastructureServiceCollectionExtensions
         }
 
         // Clipboard monitoring and reading/writing (WinRT / Win32).
-        // SourceAppResolver and WinRtClipboardReader are stateless pure helpers, so they are called
-        // statically rather than registered in DI.
+        // SourceAppResolver and WinRtClipboardReader are stateless helpers, called statically rather than via DI.
         services.AddSingleton<IClipboardMonitor, WinRtClipboardMonitor>();
         services.AddSingleton<IClipboardWriter, WinRtClipboardWriter>();
         services.AddHostedService<ClipboardMonitorHostedService>();

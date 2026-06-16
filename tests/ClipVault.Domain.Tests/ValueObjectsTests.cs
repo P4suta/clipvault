@@ -8,10 +8,7 @@ public class ValueObjectsTests
     [InlineData(0)]
     [InlineData(1)]
     [InlineData(1024)]
-    public void ClipContent_size_matches_payload_length(int length)
-    {
-        Assert.Equal(length, new ClipContent(ClipContentType.Text, new byte[length]).SizeInBytes);
-    }
+    public void ClipContent_size_matches_payload_length(int length) => Assert.Equal(length, new ClipContent(ClipContentType.Text, new byte[length]).SizeInBytes);
 
     [Fact]
     public void ClipContent_Dispose_zeroes_the_payload()
@@ -45,22 +42,13 @@ public class ValueObjectsTests
     [InlineData(false, true, false)] // Explicitly allowed.
     [InlineData(false, null, false)] // No signal.
     [InlineData(true, true, true)] // ExcludeFromHistory dominates.
-    public void PrivacySignals_ForbidsCapture_truth_table(bool exclude, bool? canInclude, bool expected)
-    {
-        Assert.Equal(expected, new ClipboardPrivacySignals(exclude, canInclude).ForbidsCapture);
-    }
+    public void PrivacySignals_ForbidsCapture_truth_table(bool exclude, bool? canInclude, bool expected) => Assert.Equal(expected, new ClipboardPrivacySignals(exclude, canInclude).ForbidsCapture);
 
     [Fact]
-    public void PrivacySignals_None_allows_capture()
-    {
-        Assert.False(ClipboardPrivacySignals.None.ForbidsCapture);
-    }
+    public void PrivacySignals_None_allows_capture() => Assert.False(ClipboardPrivacySignals.None.ForbidsCapture);
 
     [Fact]
-    public void EntryId_New_produces_unique_values()
-    {
-        Assert.NotEqual(EntryId.New(), EntryId.New());
-    }
+    public void EntryId_New_produces_unique_values() => Assert.NotEqual(EntryId.New(), EntryId.New());
 
     [Fact]
     public void EntryId_equality_is_by_value()

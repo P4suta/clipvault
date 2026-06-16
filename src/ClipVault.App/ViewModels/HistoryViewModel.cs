@@ -78,8 +78,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
         _uiDispatcher = uiDispatcher;
         _loc = loc;
 
-        // Filter options start with only the "all" entries; the concrete kinds and apps are filled
-        // in on each reload from the facets that actually exist in the history.
+        // Filter options start with only "all"; concrete kinds/apps are filled from history facets on each reload.
         _allKindsOption = new KindFilterOption(_loc.GetString("Main.Filter.All"), null);
         _allAppsOption = new AppFilterOption(_loc.GetString("Main.Filter.AllApps"), null);
         KindFilters.Add(_allKindsOption);
@@ -89,8 +88,6 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
 
         IsPaused = _captureState.IsPaused;
         _captureState.StateChanged += OnCaptureStateChanged;
-
-        // Subscribe to HistoryChangedMessage.
         _messenger.RegisterAll(this);
     }
 
@@ -169,10 +166,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
     /// onto the UI thread before reloading.
     /// </summary>
     /// <param name="message">The history-changed message.</param>
-    public void Receive(HistoryChangedMessage message)
-    {
-        _uiDispatcher.Post(() => _ = ReloadAsync());
-    }
+    public void Receive(HistoryChangedMessage message) => _uiDispatcher.Post(() => _ = ReloadAsync());
 
     /// <summary>
     /// Decodes the thumbnail for an item when its row becomes visible. Only items present in the
@@ -198,10 +192,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
 
     /// <summary>Initial load. Call once when the window is shown.</summary>
     [RelayCommand]
-    private async Task LoadAsync()
-    {
-        await ReloadAsync();
-    }
+    private async Task LoadAsync() => await ReloadAsync();
 
     /// <summary>Writes the selected entry back to the clipboard (Enter / double-click / default action).</summary>
     [RelayCommand]
@@ -214,9 +205,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
 
         var copied = await _actionService.CopyToClipboardAsync(item.Entry);
 
-        // The reload is triggered by receiving HistoryChangedMessage.
-
-        // Request automatic paste-back only when the write succeeded (otherwise finish with copy only).
+        // Reload is triggered by the HistoryChangedMessage. Request paste-back only when the write succeeded.
         if (copied)
         {
             PasteRequested?.Invoke(this, EventArgs.Empty);
@@ -249,10 +238,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
 
     /// <summary>Clears the entire history.</summary>
     [RelayCommand]
-    private async Task ClearAllAsync()
-    {
-        await _actionService.ClearAllAsync();
-    }
+    private async Task ClearAllAsync() => await _actionService.ClearAllAsync();
 
     /// <summary>Opens the read-only full-content view for the selected entry (full text, or the full-size image).</summary>
     /// <param name="item">The entry to show, or <see langword="null"/> when invoked without a selection.</param>
@@ -390,14 +376,9 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
         _detailContent = null;
     }
 
-    /// <summary>Toggles pausing/resuming capture.</summary>
+    /// <summary>Toggles pausing/resuming capture (IsPaused stays in sync via the StateChanged handler).</summary>
     [RelayCommand]
-    private void TogglePause()
-    {
-        _captureState.Toggle();
-
-        // IsPaused is synchronized through the StateChanged handler.
-    }
+    private void TogglePause() => _captureState.Toggle();
 
     /// <summary>Debounced reload when SearchText changes (auto-generated hook from CommunityToolkit).</summary>
     /// <param name="value">The new search text value.</param>
@@ -600,9 +581,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
         return true;
     }
 
-    private void OnCaptureStateChanged(object? sender, EventArgs e)
-    {
-        // StateChanged may fire on any thread, so marshal onto the UI thread.
+    // StateChanged may fire on any thread, so marshal onto the UI thread.
+    private void OnCaptureStateChanged(object? sender, EventArgs e) =>
         _uiDispatcher.Post(() => IsPaused = _captureState.IsPaused);
-    }
 }

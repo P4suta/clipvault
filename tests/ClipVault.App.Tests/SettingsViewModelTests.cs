@@ -226,10 +226,7 @@ public class SettingsViewModelTests
     }
 
     [Fact]
-    public void Defaults_to_system_language_when_unset()
-    {
-        Assert.Equal(AppLanguage.System, Build(new InMemorySettingsService()).SelectedLanguage!.Value);
-    }
+    public void Defaults_to_system_language_when_unset() => Assert.Equal(AppLanguage.System, Build(new InMemorySettingsService()).SelectedLanguage!.Value);
 
     [Fact]
     public void Selecting_a_language_persists_it()

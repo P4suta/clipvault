@@ -23,10 +23,7 @@ public class ClassifierTests
     [InlineData("sk_live_abcdefghijklmnop")] // Stripe live
     [InlineData("sk_test_abcdefghijklmnop")] // Stripe test
     [InlineData("prefix sk-abcdefghijklmnopqrstuvwx suffix")] // embedded in surrounding text
-    public void ApiKey_rejects_known_vendor_prefixes(string text)
-    {
-        Assert.Equal(ClassificationAction.Reject, new ApiKeyClassifier().Classify(text).Action);
-    }
+    public void ApiKey_rejects_known_vendor_prefixes(string text) => Assert.Equal(ClassificationAction.Reject, new ApiKeyClassifier().Classify(text).Action);
 
     [Theory]
     [InlineData("ただのテキストです")]
@@ -34,10 +31,7 @@ public class ClassifierTests
     [InlineData("AKIA1234567890ABCD")] // AKIA with fewer than 16 trailing chars
     [InlineData("sk_prod_abcdefghijklmnop")] // not the live/test sub-keyword
     [InlineData("https://example.com/path")]
-    public void ApiKey_allows_non_keys(string text)
-    {
-        Assert.Equal(ClassificationAction.Allow, new ApiKeyClassifier().Classify(text).Action);
-    }
+    public void ApiKey_allows_non_keys(string text) => Assert.Equal(ClassificationAction.Allow, new ApiKeyClassifier().Classify(text).Action);
 
     [Fact]
     public void ApiKey_respects_length_boundaries()
@@ -91,10 +85,7 @@ public class ClassifierTests
     [InlineData("-----BEGIN OPENSSH PRIVATE KEY-----")]
     [InlineData("-----BEGIN ENCRYPTED PRIVATE KEY-----")]
     [InlineData("preamble\n-----BEGIN RSA PRIVATE KEY-----\nMIIE...")]
-    public void Pem_rejects_begin_private_key_blocks(string text)
-    {
-        Assert.Equal(ClassificationAction.Reject, new PemPrivateKeyClassifier().Classify(text).Action);
-    }
+    public void Pem_rejects_begin_private_key_blocks(string text) => Assert.Equal(ClassificationAction.Reject, new PemPrivateKeyClassifier().Classify(text).Action);
 
     [Theory]
     [InlineData("-----END PRIVATE KEY-----")] // end marker must not trigger
@@ -102,10 +93,7 @@ public class ClassifierTests
     [InlineData("-----BEGIN PUBLIC KEY-----")]
     [InlineData("-----BEGIN CERTIFICATE-----")]
     [InlineData("nothing sensitive here")]
-    public void Pem_allows_non_private_key_text(string text)
-    {
-        Assert.Equal(ClassificationAction.Allow, new PemPrivateKeyClassifier().Classify(text).Action);
-    }
+    public void Pem_allows_non_private_key_text(string text) => Assert.Equal(ClassificationAction.Allow, new PemPrivateKeyClassifier().Classify(text).Action);
 
     // ---------- CreditCardClassifier ----------
     [Theory]
@@ -114,20 +102,14 @@ public class ClassifierTests
     [InlineData("4111-1111-1111-1111")] // hyphenated
     [InlineData("378282246310005")] // 15-digit Amex
     [InlineData("4242424242424242")] // 16-digit, valid Luhn
-    public void CreditCard_masks_valid_luhn(string text)
-    {
-        Assert.Equal(ClassificationAction.Mask, new CreditCardClassifier().Classify(text).Action);
-    }
+    public void CreditCard_masks_valid_luhn(string text) => Assert.Equal(ClassificationAction.Mask, new CreditCardClassifier().Classify(text).Action);
 
     [Theory]
     [InlineData("番号 4111 1111 1111 1112 は無効。")] // fails Luhn
     [InlineData("4242424242424241")] // fails Luhn
     [InlineData("電話 03-1234-5678 まで")] // too few digits
     [InlineData("ただの文章です")]
-    public void CreditCard_allows_non_cards(string text)
-    {
-        Assert.Equal(ClassificationAction.Allow, new CreditCardClassifier().Classify(text).Action);
-    }
+    public void CreditCard_allows_non_cards(string text) => Assert.Equal(ClassificationAction.Allow, new CreditCardClassifier().Classify(text).Action);
 
     [Fact]
     public void CreditCard_mask_keeps_last_four_and_strips_separators()
@@ -177,10 +159,7 @@ public class ClassifierTests
     [Theory]
     [InlineData("P@ssw0rd!Xy")]
     [InlineData("Tr0ub4dour&3xtra")]
-    public void GenericPassword_masks_strong_tokens_when_enabled(string token)
-    {
-        Assert.Equal(ClassificationAction.Mask, new GenericPasswordClassifier(Enabled()).Classify(token).Action);
-    }
+    public void GenericPassword_masks_strong_tokens_when_enabled(string token) => Assert.Equal(ClassificationAction.Mask, new GenericPasswordClassifier(Enabled()).Classify(token).Action);
 
     [Theory]
     [InlineData("password123!")] // no upper-case
@@ -190,10 +169,7 @@ public class ClassifierTests
     [InlineData("P@ss w0rd!")] // contains whitespace
     [InlineData("Aa1!Aa1!")] // class-complete but low entropy (2.0 bits)
     [InlineData("これは普通の文章です")]
-    public void GenericPassword_allows_weak_or_incomplete_tokens_when_enabled(string token)
-    {
-        Assert.Equal(ClassificationAction.Allow, new GenericPasswordClassifier(Enabled()).Classify(token).Action);
-    }
+    public void GenericPassword_allows_weak_or_incomplete_tokens_when_enabled(string token) => Assert.Equal(ClassificationAction.Allow, new GenericPasswordClassifier(Enabled()).Classify(token).Action);
 
     [Fact]
     public void GenericPassword_respects_length_and_entropy_boundaries()

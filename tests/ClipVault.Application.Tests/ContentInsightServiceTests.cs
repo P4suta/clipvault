@@ -22,22 +22,13 @@ public class ContentInsightServiceTests
     [InlineData("just some text", ContentKind.Text)]
     [InlineData("see https://example.com here", ContentKind.Text)] // not the whole preview -> plain text
     [InlineData("", ContentKind.Text)]
-    public void ClassifyText_detects_kind(string preview, ContentKind expected)
-    {
-        Assert.Equal(expected, ContentInsightService.ClassifyText(preview));
-    }
+    public void ClassifyText_detects_kind(string preview, ContentKind expected) => Assert.Equal(expected, ContentInsightService.ClassifyText(preview));
 
     [Fact]
-    public void Classify_uses_the_image_content_type()
-    {
-        Assert.Equal(ContentKind.Image, ContentInsightService.Classify(ImageEntry("anything")));
-    }
+    public void Classify_uses_the_image_content_type() => Assert.Equal(ContentKind.Image, ContentInsightService.Classify(ImageEntry("anything")));
 
     [Fact]
-    public void Classify_uses_the_preview_for_text_entries()
-    {
-        Assert.Equal(ContentKind.Url, ContentInsightService.Classify(TextEntry("https://example.com")));
-    }
+    public void Classify_uses_the_preview_for_text_entries() => Assert.Equal(ContentKind.Url, ContentInsightService.Classify(TextEntry("https://example.com")));
 
     private static ClipboardEntry TextEntry(string preview) =>
         ClipboardEntry.Create(

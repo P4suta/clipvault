@@ -85,22 +85,13 @@ public sealed class VaultManagementTests : IDisposable
     }
 
     [Fact]
-    public async Task Volatile_mode_rejects_remove_passphrase()
-    {
-        await Assert.ThrowsAsync<InvalidOperationException>(() => VolatileVault().RemovePassphraseAsync("pw"));
-    }
+    public async Task Volatile_mode_rejects_remove_passphrase() => await Assert.ThrowsAsync<InvalidOperationException>(() => VolatileVault().RemovePassphraseAsync("pw"));
 
     [Fact]
-    public async Task Volatile_mode_rejects_enable_hello()
-    {
-        await Assert.ThrowsAsync<InvalidOperationException>(() => VolatileVault().EnableHelloAsync());
-    }
+    public async Task Volatile_mode_rejects_enable_hello() => await Assert.ThrowsAsync<InvalidOperationException>(() => VolatileVault().EnableHelloAsync());
 
     [Fact]
-    public async Task Volatile_mode_rejects_disable_hello()
-    {
-        await Assert.ThrowsAsync<InvalidOperationException>(() => VolatileVault().DisableHelloAsync());
-    }
+    public async Task Volatile_mode_rejects_disable_hello() => await Assert.ThrowsAsync<InvalidOperationException>(() => VolatileVault().DisableHelloAsync());
 
     [Fact]
     public async Task Set_passphrase_rejects_an_empty_new_passphrase()

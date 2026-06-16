@@ -63,10 +63,7 @@ public sealed class JsonSettingsServiceTests : IDisposable
     }
 
     [Fact]
-    public void Default_language_is_system_when_file_missing()
-    {
-        Assert.Equal(AppLanguage.System, JsonSettingsService.Load(_path).Current.Language);
-    }
+    public void Default_language_is_system_when_file_missing() => Assert.Equal(AppLanguage.System, JsonSettingsService.Load(_path).Current.Language);
 
     [Fact]
     public void Unknown_language_falls_back_to_system()

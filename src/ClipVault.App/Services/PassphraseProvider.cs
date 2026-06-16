@@ -17,7 +17,10 @@ public sealed class PassphraseProvider : IPassphraseProvider
     /// Initializes a new instance of the <see cref="PassphraseProvider"/> class.
     /// </summary>
     /// <param name="passphrase">The passphrase validated at the startup gate, or null when unset or in volatile mode.</param>
-    public PassphraseProvider(string? passphrase) => Passphrase = passphrase;
+    public PassphraseProvider(string? passphrase)
+    {
+        Passphrase = passphrase;
+    }
 
     /// <inheritdoc/>
     public string? Passphrase { get; }

@@ -75,7 +75,7 @@ public sealed class InMemoryClipboardHistoryRepository : IClipboardHistoryReposi
         {
             // Hand back a caller-owned copy: the consumer disposes (zeroes) the materialized content,
             // which must not corrupt the instance retained in the store.
-            ClipContent? result = _byId.TryGetValue(id, out var record)
+            var result = _byId.TryGetValue(id, out var record)
                 ? new ClipContent(record.Content.Type, (byte[])record.Content.Payload.Clone())
                 : null;
             return Task.FromResult(result);

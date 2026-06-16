@@ -7,9 +7,8 @@ using WinClipboard = Windows.ApplicationModel.DataTransfer.Clipboard;
 namespace ClipVault.Infrastructure.Clipboard;
 
 /// <summary>
-/// An implementation that monitors clipboard changes through the WinRT <c>Clipboard.ContentChanged</c> event.
-/// It debounces rapid consecutive firings, reads on the UI thread, and notifies a domain snapshot.
-/// (Replacing this with the more robust AddClipboardFormatListener is a later enhancement.)
+/// Monitors clipboard changes via the WinRT <c>Clipboard.ContentChanged</c> event: debounces rapid
+/// firings, reads on the UI thread, and raises a domain snapshot.
 /// </summary>
 /// <param name="dispatcher">The UI dispatcher used to subscribe to and read the clipboard on the UI thread.</param>
 public sealed class WinRtClipboardMonitor(IUiDispatcher dispatcher) : IClipboardMonitor

@@ -11,10 +11,7 @@ public class TextPreviewTests
     [InlineData("a    b     c", "a b c")] // runs of spaces collapse
     [InlineData("", "")]
     [InlineData("   ", "")] // all whitespace becomes empty
-    public void Create_collapses_whitespace(string input, string expected)
-    {
-        Assert.Equal(expected, TextPreview.Create(input));
-    }
+    public void Create_collapses_whitespace(string input, string expected) => Assert.Equal(expected, TextPreview.Create(input));
 
     [Fact]
     public void Create_does_not_truncate_at_exactly_the_max_length()
@@ -35,8 +32,5 @@ public class TextPreviewTests
     }
 
     [Fact]
-    public void Create_honours_a_custom_max_length()
-    {
-        Assert.Equal("ab…", TextPreview.Create("abcdef", maxLength: 2));
-    }
+    public void Create_honours_a_custom_max_length() => Assert.Equal("ab…", TextPreview.Create("abcdef", maxLength: 2));
 }

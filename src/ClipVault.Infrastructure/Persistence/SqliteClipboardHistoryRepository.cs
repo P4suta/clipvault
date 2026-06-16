@@ -33,8 +33,7 @@ public sealed class SqliteClipboardHistoryRepository : IClipboardHistoryReposito
     {
         _encryption = encryption;
 
-        // Pooling is unnecessary because a single connection is held for the entire app lifetime.
-        // Disabling it guarantees the connection closes on Dispose, checkpoints the WAL, and releases the file.
+        // No pooling: a single connection is held for the app lifetime, so Dispose closes it, checkpoints the WAL, and releases the file.
         _connectionString = new SqliteConnectionStringBuilder
         {
             DataSource = options.DatabasePath,

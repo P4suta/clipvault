@@ -16,10 +16,7 @@ public class TrayMenuItemTests
     }
 
     [Fact]
-    public void Command_defaults_to_unchecked()
-    {
-        Assert.False(TrayMenuItem.Command(1, "x").IsChecked);
-    }
+    public void Command_defaults_to_unchecked() => Assert.False(TrayMenuItem.Command(1, "x").IsChecked);
 
     [Fact]
     public void Separator_creates_a_separator_item()

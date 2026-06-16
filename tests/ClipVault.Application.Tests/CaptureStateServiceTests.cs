@@ -5,10 +5,7 @@ namespace ClipVault.Application.Tests;
 public class CaptureStateServiceTests
 {
     [Fact]
-    public void Starts_unpaused()
-    {
-        Assert.False(new CaptureStateService().IsPaused);
-    }
+    public void Starts_unpaused() => Assert.False(new CaptureStateService().IsPaused);
 
     [Fact]
     public void Pause_then_unpause_toggles_state()

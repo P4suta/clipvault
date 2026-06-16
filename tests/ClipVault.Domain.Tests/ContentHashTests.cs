@@ -8,10 +8,7 @@ public class ContentHashTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Constructor_rejects_null_or_whitespace(string? value)
-    {
-        Assert.ThrowsAny<ArgumentException>(() => new ContentHash(value!));
-    }
+    public void Constructor_rejects_null_or_whitespace(string? value) => Assert.ThrowsAny<ArgumentException>(() => new ContentHash(value!));
 
     [Fact]
     public void Constructor_keeps_the_value()

@@ -1,0 +1,7 @@
+<Project>
+  <!-- Banned APIs apply to production code only; tests use System.Random (fixed seed) etc. by design.
+       Imported after the project body, so IsTestProject is already set. -->
+  <ItemGroup Condition="'$(IsTestProject)' != 'true'">
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" Link="BannedSymbols.txt" />
+  </ItemGroup>
+</Project>

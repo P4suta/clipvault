@@ -11,7 +11,10 @@ public sealed class ExcludedAppViewModel
     /// Initializes a new instance of the <see cref="ExcludedAppViewModel"/> class.
     /// </summary>
     /// <param name="name">The excluded process name.</param>
-    public ExcludedAppViewModel(string name) => Name = name;
+    public ExcludedAppViewModel(string name)
+    {
+        Name = name;
+    }
 
     /// <summary>Gets the excluded process name.</summary>
     public string Name { get; }

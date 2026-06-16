@@ -18,10 +18,7 @@ public sealed class LocalizationServiceTests
     [InlineData("zh-TW", AppLanguage.English)]
     [InlineData("zh-HK", AppLanguage.English)]
     [InlineData("fr-FR", AppLanguage.English)]
-    public void FromCulture_maps_to_a_supported_language(string cultureName, AppLanguage expected)
-    {
-        Assert.Equal(expected, LocalizationService.FromCulture(CultureInfo.GetCultureInfo(cultureName)));
-    }
+    public void FromCulture_maps_to_a_supported_language(string cultureName, AppLanguage expected) => Assert.Equal(expected, LocalizationService.FromCulture(CultureInfo.GetCultureInfo(cultureName)));
 
     [Fact]
     public void Resolve_keeps_a_concrete_language_and_ignores_the_culture()
@@ -43,10 +40,7 @@ public sealed class LocalizationServiceTests
     [InlineData(AppLanguage.Japanese, "ja")]
     [InlineData(AppLanguage.English, "en")]
     [InlineData(AppLanguage.ChineseSimplified, "zh-Hans")]
-    public void ToTag_maps_a_language_to_its_bcp47_tag(AppLanguage language, string expected)
-    {
-        Assert.Equal(expected, LocalizationService.ToTag(language));
-    }
+    public void ToTag_maps_a_language_to_its_bcp47_tag(AppLanguage language, string expected) => Assert.Equal(expected, LocalizationService.ToTag(language));
 
     [Fact]
     public void Current_resolves_system_against_the_os_culture()

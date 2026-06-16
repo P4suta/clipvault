@@ -43,8 +43,7 @@ public sealed partial class SettingsWindow : Window
         SetTitleBar(AppTitleBar);
         AppWindow.SetIcon("Assets/AppIcon.ico");
 
-        // Window.Title / TitleBar.Subtitle are not dependency properties, so they are set here rather
-        // than via the {loc:Str} markup extension.
+        // Window.Title / TitleBar.Subtitle are not dependency properties, so they are set here, not via {loc:Str}.
         Title = App.Localization.GetString("Settings.WindowTitle");
         AppTitleBar.Subtitle = App.Localization.GetString("Settings.Subtitle");
 
@@ -129,8 +128,7 @@ public sealed partial class SettingsWindow : Window
     private void OnConfirmPassphraseChanged(object sender, RoutedEventArgs e) =>
         ViewModel.ConfirmPassphrase = ConfirmPassphraseBox.Password;
 
-    // When the VM clears the fields on success, sync the PasswordBox display to empty as well.
-    // (The PasswordBox flows only one way, so the VM->UI reset is done explicitly.)
+    // PasswordBox flows one way, so on a VM-side clear, reset its display to empty explicitly.
     private void SyncPassphraseBoxesIfCleared()
     {
         if (string.IsNullOrEmpty(ViewModel.CurrentPassphrase) && CurrentPassphraseBox.Password.Length > 0)

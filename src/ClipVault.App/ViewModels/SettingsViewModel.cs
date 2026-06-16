@@ -46,8 +46,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _startup = startup;
         _loc = loc;
 
-        // Language picker: own-language endonyms for the concrete languages (so a user can always find
-        // theirs), and a localized label for the OS-following default.
+        // Language picker: endonyms for concrete languages, plus a localized label for the OS-following default.
         LanguageOptions =
         [
             new LanguageOption(AppLanguage.System, _loc.GetString("Settings.Language.System")),
@@ -324,7 +323,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 
         // The passphrase editing UI is shown only for DPAPI-only / passphrase (not while Hello is active).
         IsPassphraseControlsVisible =
-            protection == VaultProtection.DpapiOnly || protection == VaultProtection.Passphrase;
+            protection is VaultProtection.DpapiOnly or VaultProtection.Passphrase;
 
         // "Protect with Hello" only when non-volatile, available, and not yet using Hello.
         IsHelloEnableVisible = IsPassphraseSectionVisible && IsHelloAvailable && !IsHelloProtected;
@@ -397,8 +396,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 
         _settings.Update(_settings.Current with { Storage = mode });
 
-        // The change applies on restart, so the privacy panel keeps showing the running mode; refresh so the
-        // "pending restart" note (IsStorageRestartPending) appears or clears for the new selection.
+        // Applies on restart; refresh so the "pending restart" note (IsStorageRestartPending) tracks the new selection.
         RefreshProtection();
     }
 

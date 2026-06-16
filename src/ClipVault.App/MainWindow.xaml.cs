@@ -179,11 +179,9 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void FocusSearchBox()
-    {
-        // Right after showing, focus may not land, so enqueue it on the UI queue to set it reliably.
+    // Right after showing, focus may not land, so enqueue it on the UI queue to set it reliably.
+    private void FocusSearchBox() =>
         _ = DispatcherQueue.TryEnqueue(() => SearchBox.Focus(FocusState.Programmatic));
-    }
 
     /// <summary>Header "settings" button: requests the App to open the settings window (does not hide the popup).</summary>
     /// <param name="sender">The event source.</param>

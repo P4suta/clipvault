@@ -17,8 +17,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.UI.Xaml;
 
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
 namespace ClipVaultApp;
 
 /// <summary>
@@ -26,33 +24,30 @@ namespace ClipVaultApp;
 /// </summary>
 public partial class App : Application, IDisposable
 {
-    // The same instance shared with DI (ResolvedKeyVault): it holds the DEK resolved at the startup gate.
-    // It is populated only in the Windows Hello-protected disk mode; otherwise Dek == null.
+    // DEK resolved at the startup gate; populated only in Windows Hello disk mode (otherwise null). Shared with DI via ResolvedKeyVault.
     private readonly ResolvedMasterKey _resolvedKey = new();
 
     private IHost? _host;
 
-    // Controller for the tray icon, hotkeys, and context menu (created after the window HWND is known).
+    // Tray icon, hotkeys, and context menu; created once the window HWND is known.
     private TrayHotkeyController? _trayController;
 
-    // The HWND of the paste-back target window captured on summon (hotkey / tray left-click).
+    // Paste-back target window captured on summon (hotkey / tray left-click).
     private nint _pasteTargetHwnd;
 
-    // Flag to prevent a duplicate exit.
     private bool _isExiting;
 
-    // The settings window (created once on demand, then reactivated thereafter).
+    // Created on demand; reactivated thereafter.
     private SettingsWindow? _settingsWindow;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="App"/> class.
-    /// Initializes the singleton application object.
     /// </summary>
     public App()
     {
         InitializeComponent();
 
-        // Last-chance exception sinks; log the type name only (never plaintext). Termination is unchanged.
+        // Last-chance exception sinks; log the type name only (never plaintext).
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
     }
@@ -64,45 +59,42 @@ public partial class App : Application, IDisposable
     public static Window Window { get; private set; } = null!;
 
     /// <summary>
-    /// Gets the UI thread dispatcher. Use <c>App.DispatcherQueue</c> to marshal calls
-    /// to the UI thread. Fully qualified to avoid CS0104 ambiguity with
+    /// Gets the UI thread dispatcher. Fully qualified to avoid CS0104 ambiguity with
     /// <see cref="Windows.System.DispatcherQueue"/>.
     /// </summary>
     public static Microsoft.UI.Dispatching.DispatcherQueue DispatcherQueue { get; private set; } = null!;
 
     /// <summary>
-    /// Gets the application-wide DI container. It is used to resolve windows and ViewModels.
-    /// It becomes available after the host is built in <see cref="OnLaunched"/>.
+    /// Gets the application-wide DI container, used to resolve windows and ViewModels.
+    /// Available after the host is built in <see cref="OnLaunched"/>.
     /// </summary>
     public static IServiceProvider Services { get; private set; } = null!;
 
     /// <summary>
-    /// Gets the UI localization service. It is set at the very start of <see cref="StartupAsync"/>,
+    /// Gets the UI localization service. Set at the start of <see cref="StartupAsync"/>,
     /// before any window is created, so XAML (<c>{loc:Str}</c>) and code-behind can resolve strings.
     /// </summary>
     public static ILocalizationService Localization { get; private set; } = null!;
 
     /// <summary>
-    /// Gets the entry point for stopping the host and exiting the app safely, e.g. from the settings
-    /// window. The actual implementation is <see cref="ExitAsync"/> (assigned in OnLaunched).
+    /// Gets the entry point for stopping the host and exiting safely (e.g. from the settings
+    /// window). Backed by <see cref="ExitAsync"/>, assigned in <see cref="OnLaunched"/>.
     /// </summary>
     public static Func<Task> RequestExitAsync { get; private set; } = () => Task.CompletedTask;
 
-    /// <summary>Gets the entry point that opens (or reactivates) the settings window. Called from the tray or header.</summary>
+    /// <summary>Gets the entry point that opens (or reactivates) the settings window.</summary>
     public static Action OpenSettings { get; private set; } = () => { };
 
     /// <summary>
-    /// Gets the native window handle (HWND). Use for file pickers,
-    /// <c>DataTransferManager</c>, and any WinRT interop that requires
-    /// <c>InitializeWithWindow</c>.
+    /// Gets the native window handle (HWND) for file pickers, <c>DataTransferManager</c>,
+    /// and WinRT interop that requires <c>InitializeWithWindow</c>.
     /// </summary>
     public static nint WindowHandle =>
         WinRT.Interop.WindowNative.GetWindowHandle(Window);
 
     /// <summary>
-    /// Cleans up the disposable fields (host and tray controller). It is normally idempotent because
-    /// <see cref="ExitAsync"/> releases them first. WinUI does not dispose the Application, but this
-    /// is implemented to make ownership explicit.
+    /// Releases the disposable fields (host and tray controller). Idempotent because
+    /// <see cref="ExitAsync"/> releases them first; WinUI does not dispose the Application.
     /// </summary>
     public void Dispose()
     {
@@ -130,7 +122,7 @@ public partial class App : Application, IDisposable
         }
         catch (Exception ex)
         {
-            // Log and exit safely. Type + message only (never the full exception).
+            // Type + message only (never the full exception).
             Debug.WriteLine($"[ClipVault] Startup failed: {ex.GetType().Name}: {ex.Message}");
             await ExitAsync();
         }
@@ -152,13 +144,11 @@ public partial class App : Application, IDisposable
         _trayController = null;
     }
 
-    // Subscribed in the constructor; type name only.
     private static void OnUnhandledException(object sender, System.UnhandledExceptionEventArgs e) =>
         Debug.WriteLine($"[ClipVault] Fatal: {(e.ExceptionObject as Exception)?.GetType().Name ?? "unknown"}");
 
     private static void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
     {
-        // Mark observed so it is not re-raised; we deliberately keep only the type name.
         e.SetObserved();
         Debug.WriteLine($"[ClipVault] Unobserved task exception: {e.Exception.GetType().Name}");
     }
@@ -182,23 +172,18 @@ public partial class App : Application, IDisposable
     /// <summary>Loads settings, runs the unlock gate, builds the host, shows the window, and starts monitoring, in order.</summary>
     private async Task StartupAsync()
     {
-        // Capture the UI thread's DispatcherQueue (the foundation for IUiDispatcher).
         DispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
 
-        // Load settings once (the implementation falls back to defaults if they are corrupt).
+        // Falls back to defaults if settings are corrupt.
         var settings = JsonSettingsService.Load(JsonSettingsService.DefaultPath());
 
         // Apply the UI language before any window (including the unlock gate) is created.
         ApplyUiLanguage(settings.Current.Language);
 
-        // Startup unlock gate: resolve the three protection modes of encrypted disk (DPAPI only /
-        // passphrase / Windows Hello) before building the host (the volatile mode needs no gate
-        // because the key is not on disk). Passphrase returns the validated string; Hello stores the
-        // decrypted DEK into _resolvedKey and returns it.
+        // Resolve the disk-encryption unlock gate before building the host.
         var unlock = await TryUnlockAtStartupAsync(settings.Current);
 
-        // If the user abandons unlocking (chose to exit / pressed X), exit as-is.
-        // This is before the host is built, but ExitAsync cleans up each resource null-safely, so await it and finish.
+        // User abandoned unlock: ExitAsync cleans up null-safely even pre-host.
         if (unlock is UnlockResult.Cancelled)
         {
             await ExitAsync();
@@ -207,35 +192,29 @@ public partial class App : Application, IDisposable
 
         var validatedPassphrase = (unlock as UnlockResult.Unlocked)?.Passphrase;
 
-        // Build the generic host and register the services of each layer.
-        // In Hello mode, _resolvedKey.Dek is already populated and fixed before host.StartAsync
-        // (ResolvedKeyVault reads the DEK lazily after the host has started).
+        // In Hello mode _resolvedKey.Dek is already populated before StartAsync (ResolvedKeyVault reads it lazily).
         _host = Host.CreateApplicationBuilder()
             .ConfigureClipVault(DispatcherQueue, settings, validatedPassphrase, _resolvedKey)
             .Build();
         Services = _host.Services;
 
-        // Fix the entry points for exit / open-settings from the outside (e.g. the settings window).
+        // Entry points used from outside (e.g. the settings window).
         RequestExitAsync = ExitAsync;
         OpenSettings = ShowSettingsWindow;
 
-        // Resolve the main window from DI and show it.
         var window = Services.GetRequiredService<MainWindow>();
         Window = window;
 
-        // Subscribe to the paste-back request (right after the VM writes to the clipboard).
+        // Paste-back after the VM writes to the clipboard.
         window.ViewModel.PasteRequested += OnPasteRequested;
-
-        // Open the settings window from the header's "settings" button (without hiding the popup).
         window.SettingsRequested += OnSettingsRequested;
 
         Window.Activate();
 
-        // Now that the HWND is known, install the tray, hotkeys, and subclass.
+        // HWND is known now: install tray, hotkeys, and subclass.
         InitializeTray(window);
 
-        // Start clipboard monitoring (IHostedService).
-        // RunAsync is not called because WinUI owns the message loop.
+        // StartAsync (not RunAsync): WinUI owns the message loop.
         await _host.StartAsync();
     }
 
@@ -256,7 +235,6 @@ public partial class App : Application, IDisposable
     {
         if (settings.Storage != StorageMode.EncryptedDisk)
         {
-            // The volatile mode needs no gate because the key is not on disk.
             return new UnlockResult.Unlocked(null);
         }
 
@@ -264,7 +242,7 @@ public partial class App : Application, IDisposable
 
         if (keyProtector.Exists() && keyProtector.RequiresHello())
         {
-            // Windows Hello protection: decrypt the DEK via the OS prompt and store it into the holder (with retry / exit).
+            // Hello: decrypt the DEK via the OS prompt and store it into the holder (retryable / exit).
             var helloPrompt = new HelloUnlockWindow(keyProtector, new WindowsHelloService());
             helloPrompt.Activate();
 
@@ -280,7 +258,7 @@ public partial class App : Application, IDisposable
 
         if (keyProtector.Exists() && keyProtector.RequiresPassphrase())
         {
-            // Passphrase protection: pass the entered, validated passphrase to the provider.
+            // Passphrase: validate in a dedicated window, then hand the string to the provider.
             var prompt = new PassphrasePromptWindow(keyProtector);
             prompt.Activate();
 
@@ -290,7 +268,7 @@ public partial class App : Application, IDisposable
                 : new UnlockResult.Unlocked(entered);
         }
 
-        // Key not yet created (first run) or DPAPI only => no prompt needed.
+        // First run (key not yet created) or DPAPI only: no prompt needed.
         return new UnlockResult.Unlocked(null);
     }
 
@@ -327,7 +305,7 @@ public partial class App : Application, IDisposable
     /// <summary>Opens the settings window (reactivates it if already created). Does not hide the popup.</summary>
     private void ShowSettingsWindow()
     {
-        // The main window is an always-on-top popup, so hide it before opening settings (so settings is not hidden behind it).
+        // Main window is an always-on-top popup; hide it so settings is not occluded.
         if (Window is MainWindow main && main.IsWindowVisible)
         {
             main.HideToTray();
@@ -367,7 +345,7 @@ public partial class App : Application, IDisposable
             window.HideToTray();
         }
 
-        // Right after hiding, the transfer of foreground rights may not be in time, so enqueue a beat on the UI queue.
+        // Foreground transfer may lag the hide; defer a beat on the UI queue.
         _ = DispatcherQueue.TryEnqueue(() =>
         {
             PasteService.PasteInto(target);
@@ -376,9 +354,9 @@ public partial class App : Application, IDisposable
     }
 
     /// <summary>
-    /// Explicit app exit path (tray "exit" / after a panic wipe). Stops the host, then cleans up the
-    /// Win32 resources, allows the window to actually close, and exits the app. It is not called for
-    /// the window "close" action.
+    /// Explicit app exit path (tray "exit" / after a panic wipe). Stops the host, cleans up the
+    /// Win32 resources, allows the window to actually close, and exits. Not called for the
+    /// window "close" action.
     /// </summary>
     private async Task ExitAsync()
     {
@@ -389,7 +367,6 @@ public partial class App : Application, IDisposable
 
         _isExiting = true;
 
-        // Stop the monitoring service (IHostedService).
         if (_host is not null)
         {
             try
@@ -403,18 +380,15 @@ public partial class App : Application, IDisposable
             }
         }
 
-        // Zero the resolved DEK (Hello mode; null otherwise). The encryption service already zeroed
-        // its own keys when the host was disposed above.
+        // Zero the resolved DEK (Hello mode; null otherwise). The encryption service zeroed its own keys on host dispose.
         if (_resolvedKey.Dek is not null)
         {
             CryptographicOperations.ZeroMemory(_resolvedKey.Dek);
         }
 
-        // Clean up the tray icon, hotkeys, and subclass.
         _trayController?.Dispose();
         _trayController = null;
 
-        // Close the settings window if it is open.
         if (_settingsWindow is not null)
         {
             _settingsWindow.Closed -= OnSettingsWindowClosed;
@@ -422,7 +396,7 @@ public partial class App : Application, IDisposable
             _settingsWindow = null;
         }
 
-        // Cancel the "close -> hide" redirection of the popup and actually exit.
+        // Cancel the popup's close→hide redirection, then exit.
         if (Window is MainWindow window)
         {
             window.ViewModel.PasteRequested -= OnPasteRequested;

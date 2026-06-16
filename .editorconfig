@@ -15,19 +15,55 @@ indent_size = 2
 trim_trailing_whitespace = false
 
 [*.cs]
-# Modern C# conventions (readability-focused; severity capped at warning so the build is not broken here).
+# Modern C# conventions, enforced at build (warning == error via TreatWarningsAsErrors).
 csharp_style_namespace_declarations = file_scoped:warning
-csharp_prefer_braces = true:suggestion
-csharp_style_var_for_built_in_types = true:suggestion
-csharp_style_var_when_type_is_apparent = true:suggestion
-csharp_style_expression_bodied_methods = when_on_single_line:suggestion
-csharp_style_prefer_primary_constructors = true:suggestion
+dotnet_style_namespace_match_folder = true:warning
+csharp_using_directive_placement = outside_namespace:warning
+dotnet_sort_system_directives_first = true
 dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
 dotnet_style_readonly_field = true:warning
-dotnet_sort_system_directives_first = true
-dotnet_style_namespace_match_folder = true:suggestion
-# Place using directives outside the namespace.
-csharp_using_directive_placement = outside_namespace:warning
+
+# var everywhere.
+csharp_style_var_for_built_in_types = true:warning
+csharp_style_var_when_type_is_apparent = true:warning
+csharp_style_var_elsewhere = true:warning
+
+# Braces always.
+csharp_prefer_braces = true:warning
+
+# Expression bodies where they read well; constructors stay block-bodied.
+csharp_style_expression_bodied_methods = when_on_single_line:warning
+csharp_style_expression_bodied_properties = true:warning
+csharp_style_expression_bodied_accessors = true:warning
+csharp_style_expression_bodied_indexers = true:warning
+csharp_style_expression_bodied_lambdas = true:warning
+csharp_style_expression_bodied_constructors = false:warning
+
+# No this./Me. qualification (matches the SA1101 stance from the other side).
+dotnet_style_qualification_for_field = false:warning
+dotnet_style_qualification_for_property = false:warning
+dotnet_style_qualification_for_method = false:warning
+dotnet_style_qualification_for_event = false:warning
+
+# Initializers, pattern matching, and modern operators.
+dotnet_style_object_initializer = true:warning
+dotnet_style_collection_initializer = true:warning
+dotnet_style_prefer_is_null_check_over_reference_equality_method = true:warning
+dotnet_style_prefer_simplified_boolean_expressions = true:warning
+csharp_style_pattern_matching_over_is_with_cast_check = true:warning
+csharp_style_pattern_matching_over_as_with_null_check = true:warning
+csharp_style_prefer_switch_expression = true:warning
+csharp_style_prefer_pattern_matching = true:warning
+csharp_style_prefer_index_operator = true:warning
+csharp_style_prefer_range_operator = true:warning
+
+# Primary constructors: encouraged, not enforced (the fixer cannot safely hoist body logic).
+csharp_style_prefer_primary_constructors = true:suggestion
+
+# Every analyzer's Security rules are hard errors.
+dotnet_analyzer_diagnostic.category-Security.severity = error
+# Banned APIs (BannedSymbols.txt) are hard errors.
+dotnet_diagnostic.RS0030.severity = error
 
 # ===== Suppress only rules that are genuinely unfit for this app (everything else is fixed in code). =====
 # ConfigureAwait is not used (by design: WinRT/UI-thread affinity requires resuming on the UI thread).
@@ -40,10 +76,6 @@ dotnet_diagnostic.CA1062.severity = none
 dotnet_diagnostic.CA1515.severity = none
 # Concrete types created by the DI container look unused to static analysis (CA1812 false positive).
 dotnet_diagnostic.CA1812.severity = none
-# Exclusion-list names like "1password"/"lastpass"/"keepass" are app names, not credentials (S2068 false positive).
-dotnet_diagnostic.S2068.severity = none
-# byte[] is the domain representation of binary content; ReadOnlyMemory would ripple through crypto/interop for little gain (CA1819).
-dotnet_diagnostic.CA1819.severity = none
 
 # ----- StyleCop: disable only rules that conflict with this codebase's conventions. -----
 # This codebase does not use the this. prefix.
@@ -52,31 +84,24 @@ dotnet_diagnostic.SA1101.severity = none
 dotnet_diagnostic.SA1309.severity = none
 # File header comments are not used.
 dotnet_diagnostic.SA1633.severity = none
-# Doc "presence" is owned by CS1591; disable the StyleCop presence rules to avoid duplicate reports.
-# The content/wording rules (SA1611/1615/1618/1623/1642/1643, etc.) stay ON, so docs are still fully enforced.
+# Doc presence is owned by CS1591; the StyleCop content/wording rules stay on.
 dotnet_diagnostic.SA1600.severity = none
 dotnet_diagnostic.SA1601.severity = none
 dotnet_diagnostic.SA1602.severity = none
 
+# byte[] is the binary-content domain type; ReadOnlyMemory would ripple through crypto/interop for little gain (CA1819).
+[{ClipContent,ClipboardSnapshot,ImagePreview,DecodedImage,IResolvedMasterKey,ResolvedMasterKey}.cs]
+dotnet_diagnostic.CA1819.severity = none
+
+# Exclusion-list names like "1password"/"lastpass"/"keepass" are app names, not credentials (S2068 false positive).
+[ClipVaultSettings.cs]
+dotnet_diagnostic.S2068.severity = none
+
 # ===== Generated code: excluded from strict analysis (CsWin32 / XAML / CommunityToolkit.Mvvm / GeneratedRegex). =====
-[*.g.cs]
+[*.{g,g.i,Designer}.cs]
 generated_code = true
 dotnet_analyzer_diagnostic.severity = none
-# CS1591/CS1573 are compiler warnings, not silenced by the analyzer severity above; disable them explicitly for generated code.
-dotnet_diagnostic.CS1591.severity = none
-dotnet_diagnostic.CS1573.severity = none
-
-[*.g.i.cs]
-generated_code = true
-dotnet_analyzer_diagnostic.severity = none
-# CS1591/CS1573 are compiler warnings, not silenced by the analyzer severity above; disable them explicitly for generated code.
-dotnet_diagnostic.CS1591.severity = none
-dotnet_diagnostic.CS1573.severity = none
-
-[*.Designer.cs]
-generated_code = true
-dotnet_analyzer_diagnostic.severity = none
-# CS1591/CS1573 are compiler warnings, not silenced by the analyzer severity above; disable them explicitly for generated code.
+# CS1591/CS1573 are compiler warnings, not silenced by the analyzer severity above; disable them explicitly.
 dotnet_diagnostic.CS1591.severity = none
 dotnet_diagnostic.CS1573.severity = none
 

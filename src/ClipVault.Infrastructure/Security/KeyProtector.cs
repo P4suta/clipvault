@@ -7,19 +7,16 @@ using Konscious.Security.Cryptography;
 namespace ClipVault.Infrastructure.Security;
 
 /// <summary>
-/// Protects the master key (DEK) on disk. Always sealed with DPAPI (CurrentUser), and optionally
-/// adds a second factor via a passphrase (Argon2id) or Windows Hello (a signature from a TPM-protected key).
-/// With a passphrase or Hello, even malware running with the same user privileges cannot decrypt without
-/// the user's own authentication. A crypto-erase (destroying the key file) instantly renders all ciphertext
-/// unrecoverable.
+/// Protects the master key (DEK) on disk: always DPAPI (CurrentUser), optionally with a second factor
+/// via passphrase (Argon2id) or Windows Hello. The second factor blocks decryption even by malware
+/// running as the same user; deleting the key file crypto-erases the vault.
 ///
 /// File format: [magic "CVK1"(4) | version(1) | mode(1) | DPAPI(body)]
 ///   mode 0 (DPAPI):      body = DEK(32)
 ///   mode 1 (passphrase): body = [salt(16)|memKiB(4)|iters(4)|par(4)|nonce(12)|tag(16)|wrappedDEK(32)]
 ///   mode 2 (Hello):      body = [challenge(32)|nonce(12)|tag(16)|wrappedDEK(32)]
-/// The wrap uses ChaCha20-Poly1305. The whole body (including the Argon2id parameters) is inside the DPAPI
-/// envelope, so the parameters cannot be downgraded without the user's DPAPI key; only the frame header
-/// (magic|version|mode) is unauthenticated.
+/// The body (including the Argon2id parameters) is wrapped with ChaCha20-Poly1305 inside the DPAPI
+/// envelope, so it cannot be downgraded; only the frame header (magic|version|mode) is unauthenticated.
 /// </summary>
 /// <param name="keyFilePath">The path to the key file that stores the protected DEK.</param>
 /// <param name="argon">The Argon2id cost parameters to use for passphrase protection, or <see langword="null"/> to use the secure defaults.</param>

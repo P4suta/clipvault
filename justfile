@@ -79,13 +79,15 @@ clean: stop
 # Clean, then build.
 rebuild: clean build
 
-# Normalize whitespace to match .editorconfig (analyzer/style enforcement is handled by `just lint`).
+# Fix whitespace and code style to match .editorconfig (analyzers are enforced by `just lint`).
 format:
     {{dotnet}} format whitespace {{sln}}
+    {{dotnet}} format style {{sln}}
 
-# Verify whitespace has no drift (for CI / pre-commit; analyzers are enforced by `just lint`).
+# Verify whitespace and code style have no drift (CI / pre-commit; analyzers are enforced by `just lint`).
 format-check:
     {{dotnet}} format whitespace {{sln}} --verify-no-changes
+    {{dotnet}} format style {{sln}} --verify-no-changes
 
 # Spell-check source, configs, and docs (config in _typos.toml; honors .gitignore).
 typos:

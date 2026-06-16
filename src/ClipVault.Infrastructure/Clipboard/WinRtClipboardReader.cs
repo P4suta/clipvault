@@ -107,7 +107,8 @@ public static class WinRtClipboardReader
             return null;
         }
 
-        var preview = $"画像 {image.Width}×{image.Height}";
+        // Language-neutral dimensions; the list view prepends a localized "Image" label (see EntryViewModel).
+        var preview = $"{image.Width}×{image.Height}";
         return new ClipboardSnapshot(
             ClipContentType.Image,
             image.Png,

@@ -35,9 +35,7 @@ public sealed class UiDispatcher(DispatcherQueue dispatcherQueue) : IUiDispatche
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        // TryEnqueue takes a void-returning delegate, so avoid an async lambda (which would be async void)
-        // and instead fire a separate task from a synchronous lambda that funnels exceptions into the TCS
-        // (so even fire-and-forget exceptions are observed).
+        // TryEnqueue takes a void delegate; fire a task from a sync lambda and funnel exceptions into the TCS (no async void, so failures are observed).
         var enqueued = _dispatcherQueue.TryEnqueue(() => _ = RunAndSignalAsync(action, tcs));
 
         if (!enqueued)

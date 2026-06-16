@@ -48,8 +48,10 @@ public sealed partial class EntryViewModel : ObservableObject
     [ObservableProperty]
     public partial ImageSource? Thumbnail { get; private set; }
 
-    /// <summary>Gets the short summary used in the list display.</summary>
-    public string Preview => Entry.Preview;
+    /// <summary>Gets the short summary used in the list display; image entries show a localized label plus dimensions.</summary>
+    public string Preview => IsImage && Entry.Image is { } image
+        ? $"{KindLabel} {image.Width}×{image.Height}"
+        : Entry.Preview;
 
     /// <summary>Gets a value indicating whether the entry is pinned.</summary>
     public bool IsPinned => Entry.IsPinned;

@@ -51,8 +51,7 @@ internal static class HostBuilderExtensions
         // Supplier of the validated passphrase (consumed by the key vault in disk mode with passphrase protection).
         builder.Services.AddSingleton<IPassphraseProvider>(new PassphraseProvider(validatedPassphrase));
 
-        // Supplier of the DEK resolved at the startup gate (consumed by ResolvedKeyVault in disk mode with Hello protection).
-        // Shares the same instance whose contents were populated by the gate.
+        // DEK resolved at the startup gate (consumed by ResolvedKeyVault in Hello disk mode); same instance the gate populated.
         builder.Services.AddSingleton(resolvedKey);
 
         // Replace the default in-memory settings service with the persisted JSON implementation (the already-loaded instance).
@@ -78,8 +77,7 @@ internal static class HostBuilderExtensions
         this IServiceCollection services,
         Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue)
     {
-        // A singleton built from the UI thread's DispatcherQueue.
-        // Consumed by the clipboard monitoring and writing in Infrastructure.
+        // Singleton over the UI thread's DispatcherQueue; consumed by clipboard monitoring/writing in Infrastructure.
         services.AddSingleton<IUiDispatcher>(new UiDispatcher(dispatcherQueue));
 
         // Share the localization service (already created at startup) with the view models.
