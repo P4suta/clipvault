@@ -23,7 +23,8 @@ Architecture: a clean 4-layer split — `ClipVault.Domain` → `ClipVault.Applic
 - [just](https://github.com/casey/just) — task runner (also provided via mise).
 
 ```bash
-mise install        # install the pinned toolchain
+mise install        # install the pinned toolchain (dotnet, just, lefthook, typos)
+just setup          # install git hooks + local dotnet tools, then restore
 ```
 
 All `dotnet` calls go through `mise exec -- dotnet`, so you do not need a separate .NET install.
@@ -44,6 +45,7 @@ just                # list every recipe
   `just ci` adds locked-mode restore and the dependency vulnerability audit.
 - **Dependencies**: pinned via Central Package Management (`Directory.Packages.props`) with committed
   `packages.lock.json` lockfiles. `nuget.config` restricts restore to nuget.org with package source mapping.
+  After changing versions run `just relock` to regenerate the lockfiles; `just outdated` lists available updates.
 - **Coverage**: `just coverage-html` produces an HTML report.
 
 ## Releases & verification

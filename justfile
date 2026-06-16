@@ -15,6 +15,14 @@ coverage_dir := "artifacts/coverage"
 default:
     @just --list
 
+# One-time onboarding: install the toolchain, git hooks, and local dotnet tools, then restore.
+setup:
+    mise install
+    mise exec -- lefthook install
+    {{dotnet}} tool restore
+    {{dotnet}} restore {{sln}}
+    @echo "Ready. Try: just build"
+
 # Build the app (x64).
 build:
     {{dotnet}} build {{app}} -p:Platform=x64
@@ -26,6 +34,15 @@ restore:
 # Restore with the committed lockfiles enforced (fails if packages.lock.json drifts). Used by CI/Release.
 restore-locked:
     {{dotnet}} restore {{sln}} --locked-mode
+
+# Regenerate packages.lock.json after changing dependencies (Directory.Packages.props / *.csproj).
+relock:
+    {{dotnet}} restore {{sln}} --force-evaluate
+    @echo "Lockfiles refreshed. Review and commit the packages.lock.json changes."
+
+# List dependencies with newer versions available (advisory only).
+outdated:
+    {{dotnet}} list {{sln}} package --outdated
 
 # Run all tests (Domain / Application / Infrastructure / App).
 test:
@@ -41,6 +58,10 @@ test-one project:
 # Run tests filtered by name: just test-filter KeyProtector
 test-filter pattern:
     {{dotnet}} test {{infra_tests}} --filter "{{pattern}}"
+
+# Re-run a test project on file changes (default: Application). e.g. just watch-test Domain
+watch-test project="Application":
+    {{dotnet}} watch --project tests/ClipVault.{{project}}.Tests/ClipVault.{{project}}.Tests.csproj test
 
 # Stop the resident app (a tray-resident instance locks the DLL and breaks rebuilds).
 stop:

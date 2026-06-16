@@ -14,9 +14,21 @@ DOTNET_NOLOGO = "1"
 # The justfile is the source of truth for tasks; mise delegates to it (to avoid duplication).
 # Both `just <recipe>` and `mise run <task>` behave the same.
 
+[tasks.setup]
+description = "One-time onboarding (toolchain + hooks + tools) = just setup"
+run = "just setup"
+
 [tasks.build]
 description = "Build the app (x64) = just build"
 run = "just build"
+
+[tasks.relock]
+description = "Regenerate packages.lock.json after dependency changes = just relock"
+run = "just relock"
+
+[tasks.outdated]
+description = "List dependencies with newer versions = just outdated"
+run = "just outdated"
 
 [tasks.run]
 description = "Stop -> build -> launch (no install) = just run"
