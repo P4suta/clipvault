@@ -10,9 +10,7 @@ on:
   schedule:
     - cron: "23 4 * * 1" # weekly, Monday 04:23 UTC
 
-permissions:
-  contents: read
-  security-events: write # required to upload the SARIF results
+permissions: {}
 
 env:
   CI: "true"
@@ -21,8 +19,13 @@ jobs:
   analyze:
     # Windows is required to build the net10.0-windows + WinUI projects that CodeQL traces.
     runs-on: windows-latest
+    permissions:
+      contents: read
+      security-events: write # required to upload the SARIF results
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
 
       - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
         with:

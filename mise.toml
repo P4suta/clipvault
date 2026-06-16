@@ -2,9 +2,13 @@
 # Usage: after `mise install` in this directory, run `mise exec -- dotnet ...` / `mise run <task>`.
 [tools]
 dotnet = "10.0.300"
-lefthook = "latest"
-just = "latest"
+lefthook = "2.1.9"
+just = "1.52.0"
 typos = "1.47.2"
+
+[settings]
+# Record exact tool versions + checksums in mise.lock for reproducible, verifiable installs.
+lockfile = true
 
 [env]
 # Quiet, reproducible CLI (opt out of telemetry, hide the logo banner).

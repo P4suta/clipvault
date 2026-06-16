@@ -11,10 +11,12 @@ on:
   push:
     tags: ["v*.*.*"]
 
-permissions:
-  contents: write # create the GitHub Release and upload assets
-  id-token: write # OIDC token used to sign the attestations (Sigstore)
-  attestations: write # write build-provenance + SBOM attestations to the repo
+# Deny by default at the workflow scope; the release job grants only what it needs.
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false # never kill a half-finished release (attestations may already be created)
 
 env:
   CI: "true"
@@ -25,8 +27,14 @@ env:
 jobs:
   release:
     runs-on: windows-latest
+    permissions:
+      contents: write # create the GitHub Release and upload assets
+      id-token: write # OIDC token used to sign the attestations (Sigstore)
+      attestations: write # write build-provenance + SBOM attestations to the repo
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
 
       - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
         with:
@@ -48,7 +56,7 @@ jobs:
         shell: bash
         run: |
           mise exec -- dotnet publish src/ClipVault.App/ClipVault.App.csproj \
-            -c Release -p:Platform=x64 --self-contained \
+            -c Release -p:Platform=x64 --self-contained -p:RestoreLockedMode=true \
             -p:Version=${{ steps.ver.outputs.version }} \
             -o artifacts/publish/win-x64
 
@@ -86,13 +94,14 @@ jobs:
           ( cd artifacts/release && sha256sum * > SHA256SUMS.txt )
           echo "Staged:"; ls -la artifacts/release
 
-      # SLSA build provenance, bound to both the raw exe and the distributed zip.
+      # SLSA build provenance, bound to the raw exe and both distributed zips (runtime + symbols).
       - name: Attest build provenance
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           subject-path: |
             artifacts/publish/win-x64/ClipVault.App.exe
             artifacts/release/ClipVault-${{ steps.ver.outputs.version }}-win-x64.zip
+            artifacts/release/ClipVault-${{ steps.ver.outputs.version }}-win-x64-symbols.zip
 
       # Bind the CycloneDX SBOM to the application binary.
       - name: Attest SBOM
@@ -100,6 +109,28 @@ jobs:
         with:
           subject-path: artifacts/publish/win-x64/ClipVault.App.exe
           sbom-path: artifacts/sbom/clipvault.cdx.json
+
+      # Self-check: prove the attestations verify before publishing (catches digest/binding regressions
+      # and exercises the exact command users run). Retried briefly while the attestation propagates.
+      - name: Verify attestations before publishing
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          v="${{ steps.ver.outputs.version }}"
+          exe="artifacts/publish/win-x64/ClipVault.App.exe"
+          zip="artifacts/release/ClipVault-$v-win-x64.zip"
+          for i in 1 2 3 4 5; do
+            if gh attestation verify "$zip" --repo "$GITHUB_REPOSITORY" \
+                 --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+               && gh attestation verify "$exe" --repo "$GITHUB_REPOSITORY" \
+                    --predicate-type https://cyclonedx.org/bom; then
+              echo "Attestations verified."; exit 0
+            fi
+            echo "Attestation not queryable yet (attempt $i); waiting..."; sleep 15
+          done
+          echo "ERROR: attestations did not verify."; exit 1
 
       - name: Create GitHub Release
         shell: bash

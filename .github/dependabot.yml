@@ -7,6 +7,9 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
+    # Let a freshly published version age before proposing it (window to yank a bad/compromised release).
+    cooldown:
+      default-days: 5
     open-pull-requests-limit: 10
     groups:
       analyzers:
@@ -20,4 +23,6 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 5
     open-pull-requests-limit: 5
