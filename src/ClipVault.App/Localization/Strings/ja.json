@@ -4,11 +4,8 @@
 
   "Main.Search.Placeholder": "履歴を検索",
   "Main.Pause.Name": "キャプチャを一時停止",
-  "Main.Pause.Label": "一時停止",
   "Main.ClearAll.Name": "すべて消去",
-  "Main.ClearAll.Tooltip": "履歴をすべて消去",
   "Main.Settings.Name": "設定",
-  "Main.Settings.Tooltip": "設定を開く",
   "Main.HistoryList.Name": "クリップボード履歴",
   "Main.Thumbnail.Name": "サムネイル",
   "Main.ViewFull.Name": "全文を表示",
@@ -21,6 +18,24 @@
   "Main.Detail.FullText.Name": "全文",
   "Main.Detail.Image.Name": "画像",
   "Main.Detail.Copy": "コピー",
+  "Main.Detail.CleanUrl": "追跡パラメータを除いてコピー",
+  "Main.Detail.FormatJson": "整形してコピー",
+
+  "Main.More.Name": "その他",
+  "Main.Filter.Button": "絞り込み",
+  "Main.Filter.Name": "種別で絞り込み",
+  "Main.Filter.KindLabel": "種別",
+  "Main.Filter.All": "すべての種別",
+  "Main.Filter.App.Name": "アプリで絞り込み",
+  "Main.Filter.AppLabel": "アプリ",
+  "Main.Filter.AllApps": "すべてのアプリ",
+  "Kind.Text": "テキスト",
+  "Kind.Url": "URL",
+  "Kind.Email": "メール",
+  "Kind.Color": "色",
+  "Kind.Json": "JSON",
+  "Kind.Number": "数値",
+  "Kind.Image": "画像",
 
   "Settings.WindowTitle": "ClipVault 設定",
   "Settings.Subtitle": "設定",
@@ -64,6 +79,9 @@
 
   "Settings.Mask.Header": "汎用パスワードのマスク",
   "Settings.Mask.Hint": "パスワードらしき文字列を検出して取り込みを抑止します（誤検知があり得ます。即時適用）。",
+
+  "Settings.StripTracking.Header": "URL の追跡パラメータを除去",
+  "Settings.StripTracking.Hint": "コピーした URL を履歴に取り込む際、追跡パラメータ（utm_、fbclid など）を自動で除去します。ClipVault から貼り付けるとクリーンな URL になります。OS のクリップボード自体は書き換えません（即時適用）。",
 
   "Settings.Retention.Header": "保持",
   "Settings.Retention.Hint": "ピン留めしたエントリは保持上限の対象外です。変更は再起動で適用。",

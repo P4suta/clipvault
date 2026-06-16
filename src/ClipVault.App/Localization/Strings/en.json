@@ -4,11 +4,8 @@
 
   "Main.Search.Placeholder": "Search history",
   "Main.Pause.Name": "Pause capture",
-  "Main.Pause.Label": "Pause",
   "Main.ClearAll.Name": "Clear all",
-  "Main.ClearAll.Tooltip": "Clear all history",
   "Main.Settings.Name": "Settings",
-  "Main.Settings.Tooltip": "Open settings",
   "Main.HistoryList.Name": "Clipboard history",
   "Main.Thumbnail.Name": "Thumbnail",
   "Main.ViewFull.Name": "View full text",
@@ -21,6 +18,24 @@
   "Main.Detail.FullText.Name": "Full text",
   "Main.Detail.Image.Name": "Image",
   "Main.Detail.Copy": "Copy",
+  "Main.Detail.CleanUrl": "Copy without trackers",
+  "Main.Detail.FormatJson": "Copy formatted",
+
+  "Main.More.Name": "More",
+  "Main.Filter.Button": "Filter",
+  "Main.Filter.Name": "Filter by kind",
+  "Main.Filter.KindLabel": "Kind",
+  "Main.Filter.All": "All kinds",
+  "Main.Filter.App.Name": "Filter by app",
+  "Main.Filter.AppLabel": "App",
+  "Main.Filter.AllApps": "All apps",
+  "Kind.Text": "Text",
+  "Kind.Url": "URL",
+  "Kind.Email": "Email",
+  "Kind.Color": "Color",
+  "Kind.Json": "JSON",
+  "Kind.Number": "Number",
+  "Kind.Image": "Image",
 
   "Settings.WindowTitle": "ClipVault Settings",
   "Settings.Subtitle": "Settings",
@@ -64,6 +79,9 @@
 
   "Settings.Mask.Header": "Mask generic passwords",
   "Settings.Mask.Hint": "Detects password-like strings and suppresses their capture (false positives are possible; applied immediately).",
+
+  "Settings.StripTracking.Header": "Strip URL tracking parameters",
+  "Settings.StripTracking.Hint": "When a copied URL is captured, tracking parameters (utm_, fbclid, and so on) are removed automatically, so pasting from ClipVault gives a clean URL. The system clipboard itself is left untouched (applied immediately).",
 
   "Settings.Retention.Header": "Retention",
   "Settings.Retention.Hint": "Pinned entries are exempt from the retention limits. Changes take effect after a restart.",

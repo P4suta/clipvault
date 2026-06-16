@@ -1,4 +1,5 @@
 using ClipVault.Application.History;
+using ClipVault.Application.Insights;
 using ClipVault.Domain.Abstractions;
 using ClipVault.Domain.Entities;
 using ClipVault.Domain.ValueObjects;
@@ -8,6 +9,9 @@ namespace ClipVault.Application.Tests;
 
 public class HistoryQueryServiceTests
 {
+    private static readonly ContentKind[] ExpectedKinds = [ContentKind.Text, ContentKind.Url, ContentKind.Image];
+    private static readonly string[] ExpectedApps = ["chrome", "paint"];
+
     [Fact]
     public async Task Returns_all_entries_when_no_filters_are_given()
     {
@@ -70,6 +74,31 @@ public class HistoryQueryServiceTests
         var service = Build(Text("a", "x"));
 
         Assert.Empty(await service.QueryAsync(search: "nomatch"));
+    }
+
+    [Fact]
+    public async Task Filters_by_source_app_case_insensitively()
+    {
+        var service = Build(Text("a", "Chrome"), Text("b", "notepad"));
+
+        var result = await service.QueryAsync(sourceApp: "chrome");
+
+        Assert.Equal("a", Assert.Single(result).Preview);
+    }
+
+    [Fact]
+    public async Task GetFacets_lists_distinct_kinds_and_apps_that_exist()
+    {
+        var service = Build(
+            Text("https://example.com", "chrome"),
+            Text("plain text", "chrome"),
+            Image("an image", "paint"));
+
+        var facets = await service.GetFacetsAsync();
+
+        // Kinds are ordered by the enum; apps are distinct and ordered.
+        Assert.Equal(ExpectedKinds, facets.Kinds);
+        Assert.Equal(ExpectedApps, facets.SourceApps);
     }
 
     private static HistoryQueryService Build(params ClipboardEntry[] entries)

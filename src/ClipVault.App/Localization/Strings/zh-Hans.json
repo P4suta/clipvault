@@ -4,11 +4,8 @@
 
   "Main.Search.Placeholder": "搜索历史",
   "Main.Pause.Name": "暂停捕获",
-  "Main.Pause.Label": "暂停",
   "Main.ClearAll.Name": "全部清除",
-  "Main.ClearAll.Tooltip": "清除所有历史",
   "Main.Settings.Name": "设置",
-  "Main.Settings.Tooltip": "打开设置",
   "Main.HistoryList.Name": "剪贴板历史",
   "Main.Thumbnail.Name": "缩略图",
   "Main.ViewFull.Name": "查看全文",
@@ -21,6 +18,24 @@
   "Main.Detail.FullText.Name": "全文",
   "Main.Detail.Image.Name": "图片",
   "Main.Detail.Copy": "复制",
+  "Main.Detail.CleanUrl": "去除追踪参数并复制",
+  "Main.Detail.FormatJson": "格式化并复制",
+
+  "Main.More.Name": "更多",
+  "Main.Filter.Button": "筛选",
+  "Main.Filter.Name": "按类型筛选",
+  "Main.Filter.KindLabel": "类型",
+  "Main.Filter.All": "全部类型",
+  "Main.Filter.App.Name": "按应用筛选",
+  "Main.Filter.AppLabel": "应用",
+  "Main.Filter.AllApps": "全部应用",
+  "Kind.Text": "文本",
+  "Kind.Url": "网址",
+  "Kind.Email": "邮箱",
+  "Kind.Color": "颜色",
+  "Kind.Json": "JSON",
+  "Kind.Number": "数字",
+  "Kind.Image": "图像",
 
   "Settings.WindowTitle": "ClipVault 设置",
   "Settings.Subtitle": "设置",
@@ -64,6 +79,9 @@
 
   "Settings.Mask.Header": "屏蔽通用密码",
   "Settings.Mask.Hint": "检测类似密码的字符串并阻止其被捕获（可能存在误判；立即生效）。",
+
+  "Settings.StripTracking.Header": "移除网址追踪参数",
+  "Settings.StripTracking.Hint": "在将复制的网址存入历史时，自动移除追踪参数（utm_、fbclid 等），因此从 ClipVault 粘贴会得到干净的网址。系统剪贴板本身不会被改写（立即生效）。",
 
   "Settings.Retention.Header": "保留",
   "Settings.Retention.Hint": "已固定的条目不受保留上限限制。更改将在重新启动后生效。",

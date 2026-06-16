@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ClipVault.Application.Insights;
 using ClipVault.Domain.Entities;
 using ClipVault.Domain.ValueObjects;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -22,13 +23,26 @@ public sealed partial class EntryViewModel : ObservableObject
     /// Initializes a new instance of the <see cref="EntryViewModel"/> class.
     /// </summary>
     /// <param name="entry">The underlying domain entity wrapped by this row.</param>
-    public EntryViewModel(ClipboardEntry entry)
+    /// <param name="kind">The detected content kind used for the badge.</param>
+    /// <param name="kindLabel">The localized label shown on the badge.</param>
+    public EntryViewModel(ClipboardEntry entry, ContentKind kind, string kindLabel)
     {
         Entry = entry ?? throw new ArgumentNullException(nameof(entry));
+        Kind = kind;
+        KindLabel = kindLabel ?? string.Empty;
     }
 
     /// <summary>Gets the underlying domain entity passed to the action service.</summary>
     public ClipboardEntry Entry { get; }
+
+    /// <summary>Gets the detected content kind.</summary>
+    public ContentKind Kind { get; }
+
+    /// <summary>Gets the localized label shown on the kind badge.</summary>
+    public string KindLabel { get; }
+
+    /// <summary>Gets a value indicating whether a kind badge should be shown (only for the specific kinds, not plain text or images).</summary>
+    public bool HasBadge => Kind is not (ContentKind.Text or ContentKind.Image);
 
     /// <summary>Gets the thumbnail image for the entry, if available.</summary>
     [ObservableProperty]

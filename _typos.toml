@@ -3,3 +3,6 @@
 [default.extend-words]
 # Intentional minimal-difference test data (e.g. KeyedHash("abc") != KeyedHash("abd")).
 abd = "abd"
+# URL tracking-parameter prefixes stripped by UrlTrackingStripper (not misspellings).
+hsa = "hsa"
+oly = "oly"

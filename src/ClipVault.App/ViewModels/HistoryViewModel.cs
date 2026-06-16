@@ -4,6 +4,7 @@ using System.Text;
 using ClipVault.Application.Abstractions;
 using ClipVault.Application.Clipboard;
 using ClipVault.Application.History;
+using ClipVault.Application.Insights;
 using ClipVault.Application.Messages;
 using ClipVault.Domain.ValueObjects;
 using ClipVaultApp.Localization;
@@ -35,11 +36,20 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
     private readonly IUiDispatcher _uiDispatcher;
     private readonly ILocalizationService _loc;
 
+    /// <summary>The stable "all kinds" option, always present at the top of the kind filter.</summary>
+    private readonly KindFilterOption _allKindsOption;
+
+    /// <summary>The stable "all apps" option, always present at the top of the app filter.</summary>
+    private readonly AppFilterOption _allAppsOption;
+
     /// <summary>Used for search debounce; cancels the previous wait when typing continuously.</summary>
     private CancellationTokenSource? _searchDebounceCts;
 
     /// <summary>Flag to avoid redundant concurrent reloads.</summary>
     private bool _isLoading;
+
+    /// <summary>Suppresses the reload triggered by filter-selection changes made while rebuilding the option lists.</summary>
+    private bool _suppressFilterReload;
 
     /// <summary>The content shown in the full-content view, kept so the copy action can use the full payload.</summary>
     private ClipContent? _detailContent;
@@ -67,6 +77,15 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
         _messenger = messenger;
         _uiDispatcher = uiDispatcher;
         _loc = loc;
+
+        // Filter options start with only the "all" entries; the concrete kinds and apps are filled
+        // in on each reload from the facets that actually exist in the history.
+        _allKindsOption = new KindFilterOption(_loc.GetString("Main.Filter.All"), null);
+        _allAppsOption = new AppFilterOption(_loc.GetString("Main.Filter.AllApps"), null);
+        KindFilters.Add(_allKindsOption);
+        AppFilters.Add(_allAppsOption);
+        SelectedKindFilter = _allKindsOption;
+        SelectedAppFilter = _allAppsOption;
 
         IsPaused = _captureState.IsPaused;
         _captureState.StateChanged += OnCaptureStateChanged;
@@ -117,6 +136,33 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
     /// <summary>Gets the source-application title shown in the full-content view header.</summary>
     [ObservableProperty]
     public partial string? DetailTitle { get; private set; }
+
+    /// <summary>Gets the available content-kind filter options (only the kinds that exist in the history).</summary>
+    public ObservableCollection<KindFilterOption> KindFilters { get; } = [];
+
+    /// <summary>Gets the available source-application filter options (only the apps that exist in the history).</summary>
+    public ObservableCollection<AppFilterOption> AppFilters { get; } = [];
+
+    /// <summary>Gets or sets the selected content-kind filter (the "all" option carries a null kind).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsFilterActive))]
+    public partial KindFilterOption? SelectedKindFilter { get; set; }
+
+    /// <summary>Gets or sets the selected source-application filter (the "all" option carries a null app).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsFilterActive))]
+    public partial AppFilterOption? SelectedAppFilter { get; set; }
+
+    /// <summary>Gets a value indicating whether any filter is narrowing the list (used to mark the filter button).</summary>
+    public bool IsFilterActive => SelectedKindFilter?.Kind is not null || SelectedAppFilter?.App is not null;
+
+    /// <summary>Gets a value indicating whether the detail view content is a URL with strippable tracking parameters.</summary>
+    [ObservableProperty]
+    public partial bool CanCleanUrl { get; private set; }
+
+    /// <summary>Gets a value indicating whether the detail view content is valid JSON that can be reformatted.</summary>
+    [ObservableProperty]
+    public partial bool CanFormatJson { get; private set; }
 
     /// <summary>
     /// Receives a history-changed message. Because it can arrive on any thread, it marshals
@@ -232,6 +278,8 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
         _detailContent?.Dispose();
         _detailContent = content;
         DetailTitle = item.SourceName;
+        CanCleanUrl = false;
+        CanFormatJson = false;
 
         if (content.Type == ClipContentType.Image)
         {
@@ -268,9 +316,53 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
             DetailText = text.Length > MaxDetailTextLength
                 ? string.Concat(text.AsSpan(0, MaxDetailTextLength), _loc.GetString("History.Truncated"))
                 : text;
+
+            // Quick-action availability is computed precisely from the full payload, not the preview.
+            CanCleanUrl = UrlTrackingStripper.TryStrip(text, out _);
+            CanFormatJson = JsonReformatter.TryFormat(text, indented: true, out _);
         }
 
         IsDetailOpen = true;
+    }
+
+    /// <summary>Copies the detail-view URL back to the clipboard with tracking parameters removed.</summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    [RelayCommand]
+    private async Task CopyCleanedUrlAsync()
+    {
+        if (_detailContent is null)
+        {
+            return;
+        }
+
+        var text = Encoding.UTF8.GetString(_detailContent.Payload);
+        if (!UrlTrackingStripper.TryStrip(text, out var cleaned))
+        {
+            return;
+        }
+
+        using var content = new ClipContent(ClipContentType.Text, Encoding.UTF8.GetBytes(cleaned));
+        await _actionService.CopyForViewAsync(content);
+    }
+
+    /// <summary>Copies the detail-view JSON back to the clipboard, pretty-printed.</summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    [RelayCommand]
+    private async Task CopyFormattedJsonAsync()
+    {
+        if (_detailContent is null)
+        {
+            return;
+        }
+
+        var text = Encoding.UTF8.GetString(_detailContent.Payload);
+        if (!JsonReformatter.TryFormat(text, indented: true, out var formatted))
+        {
+            return;
+        }
+
+        using var content = new ClipContent(ClipContentType.Text, Encoding.UTF8.GetBytes(formatted));
+        await _actionService.CopyForViewAsync(content);
     }
 
     /// <summary>Copies the content currently shown in the full-content view back to the clipboard.</summary>
@@ -292,6 +384,8 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
         DetailText = null;
         DetailImageSource = null;
         DetailTitle = null;
+        CanCleanUrl = false;
+        CanFormatJson = false;
         _detailContent?.Dispose();
         _detailContent = null;
     }
@@ -316,6 +410,40 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
 
         _ = DebounceReloadAsync(cts.Token);
     }
+
+    /// <summary>Reloads when the content-kind filter changes, unless the change came from rebuilding the option lists.</summary>
+    /// <param name="value">The newly selected filter option.</param>
+    partial void OnSelectedKindFilterChanged(KindFilterOption? value)
+    {
+        if (!_suppressFilterReload)
+        {
+            _ = ReloadAsync();
+        }
+    }
+
+    /// <summary>Reloads when the source-application filter changes, unless the change came from rebuilding the option lists.</summary>
+    /// <param name="value">The newly selected filter option.</param>
+    partial void OnSelectedAppFilterChanged(AppFilterOption? value)
+    {
+        if (!_suppressFilterReload)
+        {
+            _ = ReloadAsync();
+        }
+    }
+
+    /// <summary>Resolves the localized label for a content kind.</summary>
+    /// <param name="kind">The content kind to label.</param>
+    /// <returns>The localized label.</returns>
+    private string KindLabelFor(ContentKind kind) => _loc.GetString(kind switch
+    {
+        ContentKind.Url => "Kind.Url",
+        ContentKind.Email => "Kind.Email",
+        ContentKind.Color => "Kind.Color",
+        ContentKind.Json => "Kind.Json",
+        ContentKind.Number => "Kind.Number",
+        ContentKind.Image => "Kind.Image",
+        _ => "Kind.Text",
+    });
 
     /// <summary>Keeps IsPaused in sync with the service state when toggled from the toggle button.</summary>
     /// <param name="value">The new paused value.</param>
@@ -359,15 +487,24 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
         _isLoading = true;
         try
         {
+            var facets = await _queryService.GetFacetsAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            SyncFilterOptions(facets);
+
             var search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText;
-            var entries = await _queryService.QueryAsync(search, cancellationToken: cancellationToken);
+            var entries = await _queryService.QueryAsync(
+                search,
+                kindFilter: SelectedKindFilter?.Kind,
+                sourceApp: SelectedAppFilter?.App,
+                cancellationToken: cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
 
             Entries.Clear();
             foreach (var entry in entries)
             {
-                Entries.Add(new EntryViewModel(entry));
+                var kind = ContentInsightService.Classify(entry);
+                Entries.Add(new EntryViewModel(entry, kind, KindLabelFor(kind)));
             }
 
             IsEmpty = Entries.Count == 0;
@@ -376,6 +513,91 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
         {
             _isLoading = false;
         }
+    }
+
+    /// <summary>
+    /// Rebuilds the filter selectors so they offer only the kinds and apps that actually exist, while
+    /// preserving the current selection (falling back to the "all" option when the selected facet disappears).
+    /// </summary>
+    /// <param name="facets">The facets present across the whole history.</param>
+    private void SyncFilterOptions(HistoryFacets facets)
+    {
+        _suppressFilterReload = true;
+        try
+        {
+            if (!KindFiltersMatch(facets.Kinds))
+            {
+                var previous = SelectedKindFilter?.Kind;
+                KindFilters.Clear();
+                KindFilters.Add(_allKindsOption);
+                foreach (var kind in facets.Kinds)
+                {
+                    KindFilters.Add(new KindFilterOption(KindLabelFor(kind), kind));
+                }
+
+                SelectedKindFilter = KindFilters.FirstOrDefault(option => option.Kind == previous) ?? _allKindsOption;
+            }
+
+            if (!AppFiltersMatch(facets.SourceApps))
+            {
+                var previous = SelectedAppFilter?.App;
+                AppFilters.Clear();
+                AppFilters.Add(_allAppsOption);
+                foreach (var app in facets.SourceApps)
+                {
+                    AppFilters.Add(new AppFilterOption(app, app));
+                }
+
+                SelectedAppFilter = AppFilters.FirstOrDefault(option =>
+                    string.Equals(option.App, previous, StringComparison.OrdinalIgnoreCase)) ?? _allAppsOption;
+            }
+        }
+        finally
+        {
+            _suppressFilterReload = false;
+        }
+    }
+
+    /// <summary>Determines whether the kind filter already offers exactly the given kinds (plus the "all" option).</summary>
+    /// <param name="present">The content kinds present in the history, in enum order.</param>
+    /// <returns><see langword="true"/> when no rebuild is needed.</returns>
+    private bool KindFiltersMatch(IReadOnlyList<ContentKind> present)
+    {
+        if (KindFilters.Count != present.Count + 1)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < present.Count; i++)
+        {
+            if (KindFilters[i + 1].Kind != present[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>Determines whether the app filter already offers exactly the given apps (plus the "all" option).</summary>
+    /// <param name="present">The source-application names present in the history, in display order.</param>
+    /// <returns><see langword="true"/> when no rebuild is needed.</returns>
+    private bool AppFiltersMatch(IReadOnlyList<string> present)
+    {
+        if (AppFilters.Count != present.Count + 1)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < present.Count; i++)
+        {
+            if (!string.Equals(AppFilters[i + 1].App, present[i], StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private void OnCaptureStateChanged(object? sender, EventArgs e)

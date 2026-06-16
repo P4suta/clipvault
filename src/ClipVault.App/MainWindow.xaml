@@ -27,7 +27,7 @@
             </TitleBar.IconSource>
         </TitleBar>
 
-        <!--  操作バー: 検索 / 一時停止 / すべて消去  -->
+        <!--  操作バー: 検索 / 絞り込み(漏斗) / その他(歯車)  -->
         <Grid
             Grid.Row="1"
             Padding="16,12"
@@ -35,7 +35,6 @@
             Visibility="{x:Bind local:MainWindow.BoolToVisibilityInverse(ViewModel.IsDetailOpen), Mode=OneWay}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
@@ -48,43 +47,89 @@
                 PlaceholderText="{loc:Str Key=Main.Search.Placeholder}"
                 Text="{x:Bind ViewModel.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-            <ToggleButton
-                x:Name="PauseButton"
+            <!--  絞り込み: 種別 / アプリ を一つのフライアウトに集約（有効時はアクセントの点で表示）  -->
+            <Button
+                x:Name="FilterButton"
                 Grid.Column="1"
                 MinWidth="40"
-                AutomationProperties.AutomationId="PauseButton"
-                AutomationProperties.Name="{loc:Str Key=Main.Pause.Name}"
-                IsChecked="{x:Bind ViewModel.IsPaused, Mode=TwoWay}"
-                ToolTipService.ToolTip="{loc:Str Key=Main.Pause.Name}">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <FontIcon FontSize="16" Glyph="&#xE769;" />
-                    <TextBlock Text="{loc:Str Key=Main.Pause.Label}" />
-                </StackPanel>
-            </ToggleButton>
-
-            <Button
-                x:Name="ClearAllButton"
-                Grid.Column="2"
-                MinWidth="40"
-                AutomationProperties.AutomationId="ClearAllButton"
-                AutomationProperties.Name="{loc:Str Key=Main.ClearAll.Name}"
-                Command="{x:Bind ViewModel.ClearAllCommand}"
-                ToolTipService.ToolTip="{loc:Str Key=Main.ClearAll.Tooltip}">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <FontIcon FontSize="16" Glyph="&#xE74D;" />
-                    <TextBlock Text="{loc:Str Key=Main.ClearAll.Name}" />
-                </StackPanel>
+                AutomationProperties.AutomationId="FilterButton"
+                AutomationProperties.Name="{loc:Str Key=Main.Filter.Button}"
+                ToolTipService.ToolTip="{loc:Str Key=Main.Filter.Button}">
+                <Grid>
+                    <FontIcon FontSize="16" Glyph="&#xE71C;" />
+                    <Ellipse
+                        Width="6"
+                        Height="6"
+                        Margin="0,-2,-2,0"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Fill="{ThemeResource AccentFillColorDefaultBrush}"
+                        Visibility="{x:Bind local:MainWindow.BoolToVisibility(ViewModel.IsFilterActive), Mode=OneWay}" />
+                </Grid>
+                <Button.Flyout>
+                    <Flyout>
+                        <StackPanel MinWidth="220" Spacing="8">
+                            <TextBlock
+                                Style="{StaticResource BodyStrongTextBlockStyle}"
+                                Text="{loc:Str Key=Main.Filter.KindLabel}" />
+                            <ComboBox
+                                x:Name="KindFilter"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.AutomationId="KindFilter"
+                                AutomationProperties.Name="{loc:Str Key=Main.Filter.Name}"
+                                DisplayMemberPath="Label"
+                                ItemsSource="{x:Bind ViewModel.KindFilters}"
+                                SelectedItem="{x:Bind ViewModel.SelectedKindFilter, Mode=TwoWay}" />
+                            <TextBlock
+                                Style="{StaticResource BodyStrongTextBlockStyle}"
+                                Text="{loc:Str Key=Main.Filter.AppLabel}" />
+                            <ComboBox
+                                x:Name="AppFilter"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.AutomationId="AppFilter"
+                                AutomationProperties.Name="{loc:Str Key=Main.Filter.App.Name}"
+                                DisplayMemberPath="Label"
+                                ItemsSource="{x:Bind ViewModel.AppFilters}"
+                                SelectedItem="{x:Bind ViewModel.SelectedAppFilter, Mode=TwoWay}" />
+                        </StackPanel>
+                    </Flyout>
+                </Button.Flyout>
             </Button>
 
+            <!--  その他: 一時停止 / すべて消去 / 設定 をメニューに集約  -->
             <Button
-                x:Name="SettingsButton"
-                Grid.Column="3"
+                x:Name="OverflowButton"
+                Grid.Column="2"
                 MinWidth="40"
-                AutomationProperties.AutomationId="SettingsButton"
-                AutomationProperties.Name="{loc:Str Key=Main.Settings.Name}"
-                Click="OnSettingsClick"
-                ToolTipService.ToolTip="{loc:Str Key=Main.Settings.Tooltip}">
+                AutomationProperties.AutomationId="OverflowButton"
+                AutomationProperties.Name="{loc:Str Key=Main.More.Name}"
+                ToolTipService.ToolTip="{loc:Str Key=Main.More.Name}">
                 <FontIcon FontSize="16" Glyph="&#xE713;" />
+                <Button.Flyout>
+                    <MenuFlyout>
+                        <ToggleMenuFlyoutItem
+                            AutomationProperties.AutomationId="PauseMenuItem"
+                            IsChecked="{x:Bind ViewModel.IsPaused, Mode=TwoWay}"
+                            Text="{loc:Str Key=Main.Pause.Name}" />
+                        <MenuFlyoutItem
+                            AutomationProperties.AutomationId="ClearAllMenuItem"
+                            Command="{x:Bind ViewModel.ClearAllCommand}"
+                            Text="{loc:Str Key=Main.ClearAll.Name}">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE74D;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem
+                            AutomationProperties.AutomationId="SettingsMenuItem"
+                            Click="OnSettingsClick"
+                            Text="{loc:Str Key=Main.Settings.Name}">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE713;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                    </MenuFlyout>
+                </Button.Flyout>
             </Button>
         </Grid>
 
@@ -139,18 +184,34 @@
                                     Visibility="{x:Bind local:MainWindow.BoolToVisibility(IsImage)}" />
                             </Grid>
 
-                            <!--  プレビュー + 発生元/時刻  -->
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <!--  プレビュー + 種別バッジ + 発生元/時刻  -->
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
                                 <TextBlock
                                     MaxLines="2"
                                     Text="{x:Bind Preview}"
                                     TextTrimming="CharacterEllipsis"
                                     TextWrapping="Wrap" />
-                                <TextBlock
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}">
-                                    <Run Text="{x:Bind SourceName}" /><Run Text=" · " /><Run Text="{x:Bind Timestamp}" />
-                                </TextBlock>
+                                <StackPanel
+                                    Orientation="Horizontal"
+                                    Spacing="6"
+                                    VerticalAlignment="Center">
+                                    <Border
+                                        Padding="6,1"
+                                        VerticalAlignment="Center"
+                                        Background="{ThemeResource ControlFillColorSecondaryBrush}"
+                                        CornerRadius="4"
+                                        Visibility="{x:Bind local:MainWindow.BoolToVisibility(HasBadge)}">
+                                        <TextBlock
+                                            FontSize="11"
+                                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                            Text="{x:Bind KindLabel}" />
+                                    </Border>
+                                    <TextBlock
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Style="{StaticResource CaptionTextBlockStyle}">
+                                        <Run Text="{x:Bind SourceName}" /><Run Text=" · " /><Run Text="{x:Bind Timestamp}" />
+                                    </TextBlock>
+                                </StackPanel>
                             </StackPanel>
 
                             <!--  ピン / 削除  -->
@@ -268,16 +329,40 @@
                         Stretch="Uniform" />
                 </ScrollViewer>
 
-                <Button
+                <StackPanel
                     Grid.Row="2"
                     HorizontalAlignment="Right"
-                    Command="{x:Bind ViewModel.CopyDetailCommand}"
-                    Style="{StaticResource AccentButtonStyle}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon FontSize="16" Glyph="&#xE8C8;" />
-                        <TextBlock Text="{loc:Str Key=Main.Detail.Copy}" />
-                    </StackPanel>
-                </Button>
+                    Orientation="Horizontal"
+                    Spacing="8">
+                    <Button
+                        AutomationProperties.AutomationId="CleanUrlButton"
+                        Command="{x:Bind ViewModel.CopyCleanedUrlCommand}"
+                        ToolTipService.ToolTip="{loc:Str Key=Main.Detail.CleanUrl}"
+                        Visibility="{x:Bind local:MainWindow.BoolToVisibility(ViewModel.CanCleanUrl), Mode=OneWay}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon FontSize="16" Glyph="&#xE894;" />
+                            <TextBlock Text="{loc:Str Key=Main.Detail.CleanUrl}" />
+                        </StackPanel>
+                    </Button>
+                    <Button
+                        AutomationProperties.AutomationId="FormatJsonButton"
+                        Command="{x:Bind ViewModel.CopyFormattedJsonCommand}"
+                        ToolTipService.ToolTip="{loc:Str Key=Main.Detail.FormatJson}"
+                        Visibility="{x:Bind local:MainWindow.BoolToVisibility(ViewModel.CanFormatJson), Mode=OneWay}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon FontSize="16" Glyph="&#xE943;" />
+                            <TextBlock Text="{loc:Str Key=Main.Detail.FormatJson}" />
+                        </StackPanel>
+                    </Button>
+                    <Button
+                        Command="{x:Bind ViewModel.CopyDetailCommand}"
+                        Style="{StaticResource AccentButtonStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon FontSize="16" Glyph="&#xE8C8;" />
+                            <TextBlock Text="{loc:Str Key=Main.Detail.Copy}" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
             </Grid>
         </Grid>
     </Grid>
