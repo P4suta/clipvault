@@ -32,11 +32,11 @@ jobs:
       id-token: write # OIDC token used to sign the attestations (Sigstore)
       attestations: write # write build-provenance + SBOM attestations to the repo
     steps:
-      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 
-      - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
+      - uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
           install: true
           cache: true
@@ -96,7 +96,7 @@ jobs:
 
       # SLSA build provenance, bound to the raw exe and both distributed zips (runtime + symbols).
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
           subject-path: |
             artifacts/publish/win-x64/ClipVault.App.exe
@@ -105,7 +105,7 @@ jobs:
 
       # Bind the CycloneDX SBOM to the application binary.
       - name: Attest SBOM
-        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
         with:
           subject-path: artifacts/publish/win-x64/ClipVault.App.exe
           sbom-path: artifacts/sbom/clipvault.cdx.json

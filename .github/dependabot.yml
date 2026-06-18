@@ -11,6 +11,8 @@ updates:
     cooldown:
       default-days: 5
     open-pull-requests-limit: 10
+    commit-message:
+      prefix: build
     groups:
       analyzers:
         patterns:
@@ -26,3 +28,8 @@ updates:
     cooldown:
       default-days: 5
     open-pull-requests-limit: 5
+    commit-message:
+      prefix: build
+    groups:
+      actions:
+        patterns: ["*"]
