@@ -1,16 +1,48 @@
-# Git hooks managed by lefthook (installed via `mise exec -- lefthook install`).
-# pre-commit: verify whitespace formatting, spell-check, then run analyzers with warnings as errors.
-# pre-push:   run the full test suite.
-# Use `--no-verify` to skip in an emergency. CI does not rely on these hooks; it runs `just check` directly.
+# Git hooks managed by lefthook (installed via `just hooks`). Structure mirrors
+# project-template (pre-commit / commit-msg / pre-push). Use `--no-verify` to skip
+# in an emergency. CI does not rely on these hooks; it runs `just ci` directly.
+#
+# Note: not run in parallel. fmt (which rewrites files) and analyze (a full dotnet
+# build) would contend over the same build outputs if concurrent, so the chain is
+# sequential — unlike the Rust template, where cargo serialises this safely.
 pre-commit:
+  skip:
+    - rebase
+    - merge
   commands:
-    format-check:
-      run: just format-check
+    fmt:
+      glob: "**/*.cs"
+      run: just fmt
+      stage_fixed: true
+    analyze:
+      run: just analyze
     typos:
       run: just typos
-    lint:
-      run: just lint
+    actionlint:
+      glob: ".github/workflows/*.{yml,yaml}"
+      run: just actionlint
+    yamllint:
+      glob: "**/*.{yml,yaml}"
+      run: just yamllint
+    markdownlint:
+      glob: "**/*.md"
+      run: just markdownlint
+    strict-code:
+      run: just strict-code
+
+commit-msg:
+  commands:
+    conventional:
+      # `committed` is a mise-managed binary. Lefthook spawns hooks under a shell
+      # whose PATH may not reflect a freshly-installed mise tool, so route through
+      # `mise exec` to resolve the binary from this project's mise.toml.
+      run: mise exec -- committed --commit-file {1}
+
 pre-push:
+  skip:
+    - rebase
   commands:
     test:
       run: just test
+    audit:
+      run: just audit

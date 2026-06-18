@@ -1,4 +1,4 @@
-# Continuous integration: build, analyze, test, and audit dependencies on every push/PR.
+# Continuous integration: lint, build, analyze, test, and audit dependencies on every push/PR.
 # Mirrors the local `just` flow so CI and developer machines share one source of truth.
 name: ci
 
@@ -27,29 +27,59 @@ jobs:
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
+          fetch-depth: 0 # full history so `committed` can lint the PR commit range
           persist-credentials: false # no pushes; do not leave the token in .git/config
 
-      # Installs the pinned toolchain from mise.toml (dotnet 10.0.300, just) and activates it.
+      # Installs the pinned toolchain from mise.toml (dotnet, just, typos, actionlint, committed) and activates it.
       - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
         with:
           install: true
           cache: true
+
+      # yamllint (Python) and markdownlint-cli2 (Node) are not pinned by mise; install them here so the
+      # `just yamllint` / `just markdownlint` recipes (which no-op when absent) actually enforce the pass.
+      - name: Install text linters (yamllint, markdownlint-cli2)
+        run: |
+          pip install --disable-pip-version-check yamllint
+          npm install -g markdownlint-cli2
+
+      # Conventional Commits gate on the PR's commit range (squash-merge uses the PR title; this also
+      # catches non-conforming commits early).
+      - name: Lint commit messages (Conventional Commits)
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: mise exec -- committed "${BASE}..${HEAD}" --no-merge-commit
 
       # Enforce the committed lockfiles (fails closed if packages.lock.json drifts).
       - name: Restore (locked)
         run: mise exec -- just restore-locked
 
       - name: Format check
-        run: mise exec -- just format-check
+        run: mise exec -- just fmt-check
 
       - name: Spell check
         run: mise exec -- just typos
 
-      - name: Lint (analyzers, warnings as errors)
-        run: mise exec -- just lint
+      - name: Analyze (analyzers, warnings as errors)
+        run: mise exec -- just analyze
+
+      - name: Lint workflows (actionlint)
+        run: mise exec -- just actionlint
+
+      - name: Lint YAML (yamllint)
+        run: mise exec -- just yamllint
+
+      - name: Lint Markdown (markdownlint)
+        run: mise exec -- just markdownlint
+
+      - name: Strict-code gate
+        run: mise exec -- just strict-code
 
       - name: Test
         run: mise exec -- just test
 
       - name: Dependency vulnerability audit
-        run: mise exec -- just vuln
+        run: mise exec -- just audit

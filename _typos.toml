@@ -6,3 +6,8 @@ abd = "abd"
 # URL tracking-parameter prefixes stripped by UrlTrackingStripper (not misspellings).
 hsa = "hsa"
 oly = "oly"
+
+# Proper nouns (repo owner / author) that appear in docs, NOTICE, and CODEOWNERS.
+[default.extend-identifiers]
+P4suta = "P4suta"
+Yasunobu = "Yasunobu"

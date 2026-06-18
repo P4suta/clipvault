@@ -5,6 +5,14 @@ dotnet = "10.0.300"
 lefthook = "2.1.9"
 just = "1.52.0"
 typos = "1.47.2"
+# Day-1 lint tooling shared with project-template's house style. Native binaries (no foreign
+# runtime), so they install cleanly on a .NET-only machine. Exact versions + checksums are
+# recorded in mise.lock.
+actionlint = "1.7.12"
+"github:crate-ci/committed" = "1.1.11"
+# yamllint (Python) and markdownlint-cli2 (Node) are deliberately NOT pinned here: a .NET project
+# does not otherwise carry those runtimes. Their `just` recipes no-op locally with an install hint
+# and CI installs them to enforce the pass — the same approach the template takes for yamllint.
 
 [settings]
 # Record exact tool versions + checksums in mise.lock for reproducible, verifiable installs.
@@ -15,12 +23,12 @@ lockfile = true
 DOTNET_CLI_TELEMETRY_OPTOUT = "1"
 DOTNET_NOLOGO = "1"
 
-# The justfile is the source of truth for tasks; mise delegates to it (to avoid duplication).
+# The Justfile is the source of truth for tasks; mise delegates to it (to avoid duplication).
 # Both `just <recipe>` and `mise run <task>` behave the same.
 
-[tasks.setup]
-description = "One-time onboarding (toolchain + hooks + tools) = just setup"
-run = "just setup"
+[tasks.bootstrap]
+description = "One-time onboarding (toolchain + hooks + tools) = just bootstrap"
+run = "just bootstrap"
 
 [tasks.build]
 description = "Build the app (x64) = just build"
@@ -46,8 +54,16 @@ run = "just test"
 description = "Build the self-contained distribution = just publish"
 run = "just publish"
 
+[tasks.lint]
+description = "All static lint passes (no tests) = just lint"
+run = "just lint"
+
+[tasks.audit]
+description = "Fail on known-vulnerable dependencies = just audit"
+run = "just audit"
+
 [tasks.ci]
-description = "CI gate (locked restore + format + lint + test + vuln) = just ci"
+description = "CI gate (locked restore + lint + test + audit) = just ci"
 run = "just ci"
 
 [tasks.typos]

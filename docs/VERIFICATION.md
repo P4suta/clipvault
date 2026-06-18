@@ -29,21 +29,21 @@ Provenance is bound to both the distributed `.zip` and the `ClipVault.App.exe` i
 you actually downloaded:
 
 ```bash
-gh attestation verify ClipVault-<version>-win-x64.zip --repo P4suta/clipboard-history
+gh attestation verify ClipVault-<version>-win-x64.zip --repo P4suta/clipvault
 ```
 
 For a stricter check, pin the exact workflow identity that is allowed to produce releases:
 
 ```bash
 gh attestation verify ClipVault-<version>-win-x64.zip \
-  --repo P4suta/clipboard-history \
-  --signer-workflow P4suta/clipboard-history/.github/workflows/release.yml
+  --repo P4suta/clipvault \
+  --signer-workflow P4suta/clipvault/.github/workflows/release.yml
 ```
 
 You can also verify the unpacked executable directly:
 
 ```bash
-gh attestation verify ClipVault.App.exe --repo P4suta/clipboard-history
+gh attestation verify ClipVault.App.exe --repo P4suta/clipvault
 ```
 
 A successful run prints the verified provenance predicate (the workflow, commit, and runner that built it).
@@ -67,7 +67,7 @@ The CycloneDX SBOM is attested against the binary's digest:
 
 ```bash
 gh attestation verify ClipVault.App.exe \
-  --repo P4suta/clipboard-history \
+  --repo P4suta/clipvault \
   --predicate-type https://cyclonedx.org/bom
 ```
 

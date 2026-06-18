@@ -91,7 +91,7 @@ jobs:
           ( cd "$out" && 7z a -tzip '-x!*.pdb' "$GITHUB_WORKSPACE/artifacts/release/ClipVault-$v-win-x64.zip" . >/dev/null )
           ( cd "$out" && 7z a -tzip "$GITHUB_WORKSPACE/artifacts/release/ClipVault-$v-win-x64-symbols.zip" '*.pdb' >/dev/null )
           cp artifacts/sbom/clipvault.cdx.json artifacts/release/
-          ( cd artifacts/release && sha256sum * > SHA256SUMS.txt )
+          ( cd artifacts/release && sha256sum -- * > SHA256SUMS.txt )
           echo "Staged:"; ls -la artifacts/release
 
       # SLSA build provenance, bound to the raw exe and both distributed zips (runtime + symbols).

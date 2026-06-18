@@ -10,3 +10,6 @@ dist/
 .vs/
 *.user
 .DS_Store
+
+# Personal, machine-local dev notes (never shared); matches project-template.
+CLAUDE.md

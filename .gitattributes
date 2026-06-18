@@ -3,7 +3,15 @@
 
 # Files executed under bash (CI runners, just recipes) must stay LF.
 *.sh text eol=lf
-justfile text eol=lf
+Justfile text eol=lf
+
+# License/attribution text stays LF (matches project-template).
+LICENSE text eol=lf
+NOTICE text eol=lf
+
+# Generated lockfiles: keep them out of GitHub's language stats and collapse them in diffs.
+**/packages.lock.json linguist-generated=true
+mise.lock linguist-generated=true
 
 # Binary assets: no line-ending conversion, no textual diff.
 *.png binary

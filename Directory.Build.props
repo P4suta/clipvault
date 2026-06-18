@@ -25,8 +25,8 @@
     <Copyright>Copyright 2026 Yasunobu</Copyright>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/P4suta/clipboard-history</RepositoryUrl>
-    <PackageProjectUrl>https://github.com/P4suta/clipboard-history</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/P4suta/clipvault</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/P4suta/clipvault</PackageProjectUrl>
   </PropertyGroup>
 
   <!-- Strict analysis: all analyzers at the highest level, code style enforced at build, warnings as errors. -->

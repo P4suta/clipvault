@@ -23,8 +23,8 @@ Architecture: a clean 4-layer split — `ClipVault.Domain` → `ClipVault.Applic
 - [just](https://github.com/casey/just) — task runner (also provided via mise).
 
 ```bash
-mise install        # install the pinned toolchain (dotnet, just, lefthook, typos)
-just setup          # install git hooks + local dotnet tools, then restore
+mise install        # install the pinned toolchain (dotnet, just, lefthook, typos, actionlint, committed)
+just bootstrap      # install git hooks + local dotnet tools, then restore
 ```
 
 All `dotnet` calls go through `mise exec -- dotnet`, so you do not need a separate .NET install.
@@ -35,14 +35,16 @@ All `dotnet` calls go through `mise exec -- dotnet`, so you do not need a separa
 just build          # build the app (x64)
 just run            # stop any resident instance, build, and launch
 just test           # run all test projects
-just check          # pre-commit gate: format check + analyzers (warnings as errors) + tests
+just lint           # all static lints: format check + analyzers (warnings as errors) + typos + actionlint/yamllint/markdownlint + strict-code
 just                # list every recipe
 ```
 
 ## Develop
 
-- **Quality gate**: `just check` mirrors CI (format, spell-check via `typos`, analyzers as errors, tests).
-  `just ci` adds locked-mode restore and the dependency vulnerability audit.
+- **Quality gate**: `just lint` runs every static check (format, `typos`, analyzers as errors, `actionlint`,
+  `yamllint`, `markdownlint`, `strict-code`); `just ci` is the full gate (locked restore + lint + tests +
+  dependency vulnerability audit). Commits follow [Conventional Commits](https://www.conventionalcommits.org/),
+  enforced by the `committed` commit-msg hook.
 - **Dependencies**: pinned via Central Package Management (`Directory.Packages.props`) with committed
   `packages.lock.json` lockfiles. `nuget.config` restricts restore to nuget.org with package source mapping.
   After changing versions run `just relock` to regenerate the lockfiles; `just outdated` lists available updates.
@@ -62,8 +64,8 @@ To verify a download, see **[docs/VERIFICATION.md](docs/VERIFICATION.md)**:
 
 ```bash
 gh attestation verify ClipVault-<version>-win-x64.zip \
-  --repo P4suta/clipboard-history \
-  --signer-workflow P4suta/clipboard-history/.github/workflows/release.yml
+  --repo P4suta/clipvault \
+  --signer-workflow P4suta/clipvault/.github/workflows/release.yml
 ```
 
 ## Security

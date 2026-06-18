@@ -1,13 +1,19 @@
-<!-- Keep the change focused. For security issues, use private vulnerability reporting, not a public PR. -->
+<!-- The PR title becomes the squashed commit message — write it as a Conventional Commit subject
+     (e.g. `feat: add per-app exclusion`). For security issues, use private vulnerability reporting,
+     not a public PR. -->
 
-## What and why
+## Summary
 
 <!-- What does this change, and why? Link any related issue. -->
 
-## Checklist
+## Verification
 
-- [ ] `just check` passes (format + spell check + analyzers as errors + tests).
-- [ ] Tests added or updated for the change.
-- [ ] No new warnings; no analyzer suppressions without a justification.
-- [ ] Dependency changes are accompanied by regenerated `packages.lock.json` (`just relock`).
+- [ ] `just lint` passes (format + analyzers as errors + typos + actionlint/yamllint/markdownlint + strict-code).
+- [ ] `just test` passes; tests added or updated for the change.
+- [ ] No new warnings; no analyzer suppressions without an attributed `Justification`.
+- [ ] Dependency changes are accompanied by a regenerated `packages.lock.json` (`just relock`).
 - [ ] Docs/comments updated where relevant (English, terse).
+
+## ADR
+
+<!-- If this makes an architecturally significant decision, link the ADR (docs/adr/NNNN-*.md). -->
