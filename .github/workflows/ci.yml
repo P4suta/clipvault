@@ -25,7 +25,7 @@ jobs:
     permissions:
       contents: read # only needs to read the repository
     steps:
-      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0 # full history so `committed` can lint the PR commit range
           persist-credentials: false # no pushes; do not leave the token in .git/config
