@@ -96,7 +96,7 @@ jobs:
 
       # SLSA build provenance, bound to the raw exe and both distributed zips (runtime + symbols).
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
           subject-path: |
             artifacts/publish/win-x64/ClipVault.App.exe
