@@ -15,3 +15,7 @@ rules:
     check-keys: false
   # `---` document-start is noise for single-document config files.
   document-start: disable
+  # This repo is Windows-primary and checks out CRLF (.editorconfig end_of_line=crlf,
+  # .gitattributes text=auto). Don't enforce unix newlines on YAML — it fails only on
+  # the Windows CI checkout, not locally. Line-ending policy is owned by gitattributes.
+  new-lines: disable
