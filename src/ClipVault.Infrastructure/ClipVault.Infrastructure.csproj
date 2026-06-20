@@ -16,8 +16,11 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" />
+    <!-- Modern SourceGear-based SQLite native bundle (SQLitePCLRaw 3.x); see Directory.Packages.props. -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
   </ItemGroup>

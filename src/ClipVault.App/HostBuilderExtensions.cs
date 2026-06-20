@@ -12,6 +12,7 @@ using ClipVaultApp.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace ClipVaultApp;
 
@@ -40,6 +41,11 @@ internal static class HostBuilderExtensions
         string? validatedPassphrase,
         IResolvedMasterKey resolvedKey)
     {
+        // Privacy / no footprint: route logs only to the debugger output (OutputDebugString) — never the
+        // console, Event Log, or a file. Clear the providers Host.CreateApplicationBuilder adds by default.
+        builder.Logging.ClearProviders();
+        builder.Logging.AddDebug();
+
         builder.Services.AddPresentation(dispatcherQueue);
         builder.Services.AddApplication();
 

@@ -1,9 +1,9 @@
 using System;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Windows.Input;
 using ClipVaultApp.Platform;
 using ClipVaultApp.ViewModels;
+using Microsoft.Extensions.Logging;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -24,6 +24,9 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private static HistoryViewModel? _sharedViewModel;
 
+    /// <summary>Logs non-fatal UI failures (type and message only).</summary>
+    private readonly ILogger<MainWindow> _logger;
+
     /// <summary>Flag to perform the initial load only on the first activation.</summary>
     private bool _isFirstActivationDone;
 
@@ -37,9 +40,11 @@ public sealed partial class MainWindow : Window
     /// Initializes a new instance of the <see cref="MainWindow"/> class.
     /// </summary>
     /// <param name="viewModel">The history ViewModel that backs this window.</param>
-    public MainWindow(HistoryViewModel viewModel)
+    /// <param name="logger">Logs non-fatal UI failures.</param>
+    public MainWindow(HistoryViewModel viewModel, ILogger<MainWindow> logger)
     {
         ViewModel = viewModel;
+        _logger = logger;
         ShareViewModel(viewModel);
 
         InitializeComponent();
@@ -161,8 +166,8 @@ public sealed partial class MainWindow : Window
             catch (Exception ex)
             {
                 // Do not crash the UI if the initial load fails (continue with an empty list).
-                // Type + message only — never the full exception object.
-                Debug.WriteLine($"[ClipVault] Failed to load the initial history: {ex.GetType().Name}: {ex.Message}");
+                // Type and message only — never the full exception object.
+                _logger.LogError("Failed to load the initial history: {ExceptionType}: {ExceptionMessage}", ex.GetType().Name, ex.Message);
             }
 
             FocusSearchBox();

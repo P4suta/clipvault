@@ -1,8 +1,8 @@
 using System;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Windows.Input;
 using ClipVaultApp.ViewModels;
+using Microsoft.Extensions.Logging;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -26,15 +26,20 @@ public sealed partial class SettingsWindow : Window
     /// </summary>
     private static SettingsViewModel? _sharedViewModel;
 
+    /// <summary>Logs non-fatal failures (type and message only).</summary>
+    private readonly ILogger<SettingsWindow> _logger;
+
     private bool _isClosed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SettingsWindow"/> class.
     /// </summary>
     /// <param name="viewModel">The settings ViewModel that backs this window.</param>
-    public SettingsWindow(SettingsViewModel viewModel)
+    /// <param name="logger">Logs non-fatal failures.</param>
+    public SettingsWindow(SettingsViewModel viewModel, ILogger<SettingsWindow> logger)
     {
         ViewModel = viewModel;
+        _logger = logger;
         ShareViewModel(viewModel);
 
         InitializeComponent();
@@ -193,8 +198,8 @@ public sealed partial class SettingsWindow : Window
         }
         catch (Exception ex)
         {
-            // Type + message only — never the full exception object.
-            Debug.WriteLine($"[ClipVault] Panic wipe failed: {ex.GetType().Name}: {ex.Message}");
+            // Type and message only — never the full exception object.
+            _logger.LogError("Panic wipe failed: {ExceptionType}: {ExceptionMessage}", ex.GetType().Name, ex.Message);
         }
     }
 }
