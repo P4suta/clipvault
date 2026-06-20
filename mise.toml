@@ -3,7 +3,7 @@
 [tools]
 dotnet = "10.0.300"
 lefthook = "2.1.9"
-just = "1.52.0"
+just = "1.53.0"
 typos = "1.47.2"
 # Day-1 lint tooling shared with project-template's house style. Native binaries (no foreign
 # runtime), so they install cleanly on a .NET-only machine. Exact versions + checksums are

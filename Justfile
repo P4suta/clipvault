@@ -185,6 +185,27 @@ strict-code:
 # All static lint passes (no tests). Mirrors the lefthook pre-commit chain plus the YAML/MD/Actions linters.
 lint: fmt-check analyze typos actionlint yamllint markdownlint strict-code
 
+# Apply every auto-fixer (whitespace, code style, typos). Review the diff before committing.
+fix: fmt typos-fix
+
+# `check` is the fast inner-loop companion to the full `analyze` gate: an incremental App build
+# (warnings as errors catches analyzer drift on changed files) plus the cheap style/grep verifiers.
+# It is NOT a substitute for `just lint` / the pre-commit `analyze` gate, which still build every
+# project with --no-incremental.
+
+# Fast inner-loop check (seconds): incremental App build + style/grep verify.
+check: stop
+    {{dotnet}} build {{app}} -p:Platform=x64 -warnaserror
+    just fmt-check
+    just strict-code
+
+# Build-only on purpose: `dotnet watch run` is unreliable for a tray-resident, single-instance,
+# self-contained WinUI app (see docs/DEVELOPMENT.md).
+
+# Recompile the App on every change (build-only fast feedback).
+watch-check:
+    {{dotnet}} watch --project {{app}} -p:Platform=x64 build
+
 # ---------------------------------------------------------------------------
 # Audit, coverage
 # ---------------------------------------------------------------------------
@@ -282,7 +303,23 @@ ci: restore-locked lint test audit
 # Misc
 # ---------------------------------------------------------------------------
 
-# Check the toolchain (mise's dotnet version).
+# Environment health check: tools resolve, hooks installed, SDK/OS sane, artifacts writable.
 doctor:
-    {{dotnet}} --version
-    @echo "app: {{app}}"
+    #!/usr/bin/env bash
+    set -uo pipefail
+    fail=0
+    ok(){ echo "ok   $1"; }
+    bad(){ echo "FAIL $1"; fail=1; }
+    command -v mise >/dev/null 2>&1 && ok "mise on PATH" || bad "mise not on PATH — https://mise.jdx.dev/installing-mise.html"
+    for t in dotnet just lefthook typos actionlint committed; do
+      mise exec -- "$t" --version >/dev/null 2>&1 && ok "tool: $t" || bad "tool unresolved: $t (run: mise install)"
+    done
+    want=$(grep -E '^dotnet' mise.toml | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+    got=$(mise exec -- dotnet --version 2>/dev/null)
+    { [ -n "$got" ] && [ "$got" = "$want" ]; } && ok "dotnet $got" || bad "dotnet ${got:-missing} (want $want)"
+    { [ -f .git/hooks/pre-commit ] && grep -q lefthook .git/hooks/pre-commit; } \
+      && ok "git hooks installed" || bad "git hooks missing — run: just hooks"
+    case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) ok "windows shell";; *) bad "not a Windows shell (ClipVault builds on Windows only)";; esac
+    { mkdir -p artifacts && : > artifacts/.doctor && rm -f artifacts/.doctor; } 2>/dev/null \
+      && ok "artifacts writable" || bad "artifacts/ not writable"
+    [ "$fail" -eq 0 ] && echo "doctor: OK" || { echo "doctor: PROBLEMS"; exit 1; }

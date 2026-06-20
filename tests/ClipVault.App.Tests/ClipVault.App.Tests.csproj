@@ -6,6 +6,10 @@
     <Platforms>x64</Platforms>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!-- xUnit v3 test projects run as standalone executables. -->
+    <OutputType>Exe</OutputType>
+    <!-- This test exe references the self-contained App exe; allow the mismatch (NETSDK1151). -->
+    <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
     <UseWinUI>true</UseWinUI>
     <EnableMsixTooling>false</EnableMsixTooling>
     <!-- WinUI's build trims transitive copies; force every NuGet dependency (incl. the VSTest host assemblies) to land in the output so the test host can start. -->
@@ -15,7 +19,7 @@
   <ItemGroup>
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="NSubstitute" />
   </ItemGroup>

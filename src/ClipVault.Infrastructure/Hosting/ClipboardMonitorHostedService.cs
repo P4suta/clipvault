@@ -1,8 +1,8 @@
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using ClipVault.Application.Clipboard;
 using ClipVault.Domain.Abstractions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace ClipVault.Infrastructure.Hosting;
 
@@ -12,9 +12,11 @@ namespace ClipVault.Infrastructure.Hosting;
 /// </summary>
 /// <param name="monitor">The clipboard monitor that raises change notifications.</param>
 /// <param name="ingestion">The ingestion service that processes each clipboard snapshot.</param>
+/// <param name="logger">Logs best-effort ingestion failures (type and message only).</param>
 public sealed class ClipboardMonitorHostedService(
     IClipboardMonitor monitor,
-    ClipboardIngestionService ingestion) : IHostedService
+    ClipboardIngestionService ingestion,
+    ILogger<ClipboardMonitorHostedService> logger) : IHostedService
 {
     /// <inheritdoc/>
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -45,8 +47,8 @@ public sealed class ClipboardMonitorHostedService(
             }
             catch (Exception ex)
             {
-                // Type + message only; never the full exception (avoid leaking clipboard content).
-                Debug.WriteLine($"[ClipVault] Ingestion failed: {ex.GetType().Name}: {ex.Message}");
+                // Type and message only; never the full exception (avoid leaking clipboard content).
+                logger.LogError("Ingestion failed: {ExceptionType}: {ExceptionMessage}", ex.GetType().Name, ex.Message);
             }
         });
     }

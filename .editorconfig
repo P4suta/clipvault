@@ -76,6 +76,11 @@ dotnet_diagnostic.CA1062.severity = none
 dotnet_diagnostic.CA1515.severity = none
 # Concrete types created by the DI container look unused to static analysis (CA1812 false positive).
 dotnet_diagnostic.CA1812.severity = none
+# Logging policy: error sinks are cold paths that log the exception type + message only — never the full
+# exception object (it may carry clipboard content) — to a non-persistent Debug-only sink. CA1848
+# (LoggerMessage delegates) is overkill for rare failures; S6667 would force passing the whole exception.
+dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.S6667.severity = none
 
 # ----- StyleCop: disable only rules that conflict with this codebase's conventions. -----
 # This codebase does not use the this. prefix.
@@ -117,3 +122,6 @@ dotnet_diagnostic.CA2000.severity = suggestion
 dotnet_diagnostic.CA5394.severity = none
 # Static [MemberData] providers and static helpers are conventionally placed after the test methods.
 dotnet_diagnostic.SA1204.severity = none
+# xUnit v3 (xUnit1051) wants TestContext.Current.CancellationToken on every call that accepts one;
+# these are fast, non-cancelling unit tests, so threading it through every call site is pure noise.
+dotnet_diagnostic.xUnit1051.severity = none

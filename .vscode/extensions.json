@@ -1,0 +1,15 @@
+{
+  // Suggested when the folder is opened. C# Dev Kit drives build/debug/test; the others align the
+  // editor with the repo's pinned tooling (.editorconfig, typos, just, mise.toml, yaml/lefthook).
+  // No XAML-preview extension is listed — none is reliable for WinUI 3 (use Visual Studio for live
+  // XAML, see docs/DEVELOPMENT.md).
+  "recommendations": [
+    "ms-dotnettools.csdevkit",
+    "ms-dotnettools.csharp",
+    "editorconfig.editorconfig",
+    "tekumara.typos-vscode",
+    "skellock.just",
+    "tamasfe.even-better-toml",
+    "redhat.vscode-yaml"
+  ]
+}

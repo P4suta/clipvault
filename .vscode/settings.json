@@ -1,0 +1,16 @@
+{
+  // .editorconfig is the single source of truth for formatting (CRLF, indentation, C# style).
+  // These keys only add what .editorconfig cannot express — do NOT restate eol/indent here, or the
+  // two will drift.
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": { "source.fixAll": "explicit" },
+  "[csharp]": { "editor.defaultFormatter": "ms-dotnettools.csharp" },
+
+  // Keep the heavy, gitignored self-contained build tree out of search and file watching.
+  "search.exclude": { "**/artifacts": true },
+  "files.watcherExclude": { "**/artifacts/**": true },
+
+  // C# Dev Kit loads the .slnx directly. If a Dev Kit build struggles to open it, remove this key
+  // and let Dev Kit auto-discover the solution.
+  "dotnet.defaultSolution": "ClipVault.slnx"
+}

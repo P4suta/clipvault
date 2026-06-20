@@ -1,8 +1,8 @@
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using ClipVault.Application.Retention;
 using ClipVault.Domain.Abstractions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace ClipVault.Infrastructure.Hosting;
 
@@ -12,7 +12,8 @@ namespace ClipVault.Infrastructure.Hosting;
 /// </summary>
 /// <param name="retention">The retention service that enforces the policy.</param>
 /// <param name="clock">The clock used to determine the current time when enforcing the policy.</param>
-public sealed class RetentionHostedService(RetentionService retention, IClock clock) : BackgroundService
+/// <param name="logger">Logs best-effort cleanup failures (type and message only).</param>
+public sealed class RetentionHostedService(RetentionService retention, IClock clock, ILogger<RetentionHostedService> logger) : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromMinutes(15);
 
@@ -36,8 +37,8 @@ public sealed class RetentionHostedService(RetentionService retention, IClock cl
             }
             catch (Exception ex)
             {
-                // Log type + message only; never the full exception object.
-                Debug.WriteLine($"[ClipVault] Retention cleanup failed: {ex.GetType().Name}: {ex.Message}");
+                // Type and message only; never the full exception object (avoid leaking clipboard content).
+                logger.LogError("Retention cleanup failed: {ExceptionType}: {ExceptionMessage}", ex.GetType().Name, ex.Message);
             }
         }
         while (await SafeWaitAsync(timer, stoppingToken));

@@ -1,0 +1,50 @@
+{
+  // Tasks shell out to `mise exec -- just <recipe>` so they use the mise-pinned `just` and inherit
+  // the mise env, exactly as lefthook and CI invoke them (the Justfile is the single source of truth).
+  // `build` is the default build task (Ctrl+Shift+B) and depends on `stop` to release the
+  // tray-resident DLL lock before rebuilding. `$msCompile` surfaces analyzer/compiler errors
+  // (warnings-as-errors) as clickable entries in the Problems panel.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "stop",
+      "type": "shell",
+      "command": "mise exec -- just stop",
+      "problemMatcher": []
+    },
+    {
+      "label": "build",
+      "type": "shell",
+      "command": "mise exec -- just build",
+      "dependsOn": ["stop"],
+      "dependsOrder": "sequence",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "run",
+      "type": "shell",
+      "command": "mise exec -- just run",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "check",
+      "type": "shell",
+      "command": "mise exec -- just check",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "test",
+      "type": "shell",
+      "command": "mise exec -- just test",
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "lint",
+      "type": "shell",
+      "command": "mise exec -- just lint",
+      "problemMatcher": "$msCompile"
+    }
+  ]
+}
