@@ -1,0 +1,21 @@
+{
+  // F5 debugs the unpackaged, self-contained WinUI 3 exe directly — no MSIX activation indirection
+  // (WindowsPackageType=None). The exe path follows the UseArtifactsOutput layout
+  // (artifacts/bin/{Project}/{config}_{rid}/). `just build` produces Debug/x64 on an x64 host, hence
+  // debug_win-x64. On an ARM64 host the rid folder differs — adjust `program`/`cwd` accordingly.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug ClipVault (unpackaged x64)",
+      "type": "coreclr",
+      "request": "launch",
+      // `build` (tasks.json) depends on `stop`, so the tray-resident DLL lock is released first.
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/artifacts/bin/ClipVault.App/debug_win-x64/ClipVault.App.exe",
+      "cwd": "${workspaceFolder}/artifacts/bin/ClipVault.App/debug_win-x64",
+      "args": [],
+      "console": "internalConsole",
+      "stopAtEntry": false
+    }
+  ]
+}

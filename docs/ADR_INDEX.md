@@ -5,10 +5,15 @@ Architecture Decision Records. Each file documents one decision; once
 accepted an ADR is never edited — it is *superseded* by a later ADR
 that links back.
 
-| ADR                                                 | Title                            | Status   |
-| --------------------------------------------------- | -------------------------------- | -------- |
-| [0001](./adr/0001-record-architecture-decisions.md) | Record architecture decisions    | accepted |
-| [0002](./adr/0002-single-apache-2-0-license.md)     | License under Apache-2.0 only    | accepted |
+| ADR                                                          | Title                             | Status   |
+| ------------------------------------------------------------ | --------------------------------- | -------- |
+| [0001](./adr/0001-record-architecture-decisions.md)          | Record architecture decisions     | accepted |
+| [0002](./adr/0002-single-apache-2-0-license.md)              | License under Apache-2.0 only     | accepted |
+| [0003](./adr/0003-clean-layered-architecture.md)             | Clean layered architecture        | accepted |
+| [0004](./adr/0004-encrypt-clipboard-at-rest.md)              | Encrypt clipboard at rest         | accepted |
+| [0005](./adr/0005-volatile-mode-and-capture-privacy-gate.md) | Volatile mode and capture gate    | accepted |
+| [0006](./adr/0006-win-v-via-low-level-keyboard-hook.md)      | Win+V via low-level keyboard hook | accepted |
+| [0007](./adr/0007-custom-json-localization.md)               | Custom JSON localization          | accepted |
 
 ## Authoring a new ADR
 

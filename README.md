@@ -13,14 +13,15 @@ encrypts it at rest, and is built to leave no persistent system footprint.
   hotkey. OS registrations are runtime-only and released on exit.
 
 Architecture: a clean 4-layer split — `ClipVault.Domain` → `ClipVault.Application` → `ClipVault.Infrastructure`
-→ `ClipVault.App` (WinUI 3). Targets .NET 10 on Windows (x64).
+→ `ClipVault.App` (WinUI 3). Targets .NET 10 on Windows (x64). See
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the layer map and where to make changes.
 
 ## Prerequisites
 
 - Windows 10 2004+ / Windows 11 (x64).
-- [mise](https://mise.jdx.dev/) — pins the toolchain (.NET SDK 10.0.300, `just`, `lefthook`) declared in
-  `mise.toml`.
-- [just](https://github.com/casey/just) — task runner (also provided via mise).
+- [mise](https://mise.jdx.dev/installing-mise.html) — **install this first**; it pins the toolchain
+  (.NET SDK 10.0.300, `just`, `lefthook`) declared in `mise.toml`.
+- `just` — the task runner, installed by mise (no separate install needed).
 
 ```bash
 mise install        # install the pinned toolchain (dotnet, just, lefthook, typos, actionlint, committed)
@@ -39,8 +40,19 @@ just lint           # all static lints: format check + analyzers (warnings as er
 just                # list every recipe
 ```
 
+### Troubleshooting
+
+- **Build fails with a locked DLL** — a tray-resident instance holds `ClipVault.App.exe`; run `just stop`
+  (or `just run`, which stops first).
+- **Hooks not running on commit** — run `just hooks` to (re)install lefthook.
+- **`mise: command not found`** — install mise first (see [Prerequisites](#prerequisites)).
+- **`yamllint` / `markdownlint` skipped locally** — expected (not pinned by mise); CI enforces them.
+- `just doctor` checks the toolchain, hooks, and environment.
+
 ## Develop
 
+- **Day-to-day**: see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the dev loop, recipe cheat-sheet,
+  IDE setup (`.vscode/` tasks + F5 debug), and the off-Windows story.
 - **Quality gate**: `just lint` runs every static check (format, `typos`, analyzers as errors, `actionlint`,
   `yamllint`, `markdownlint`, `strict-code`); `just ci` is the full gate (locked restore + lint + tests +
   dependency vulnerability audit). Commits follow [Conventional Commits](https://www.conventionalcommits.org/),

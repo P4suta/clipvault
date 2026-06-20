@@ -33,6 +33,8 @@ disable` is rejected by `just strict-code`).
 `yamllint` (Python) and `markdownlint-cli2` (Node) are not pinned by mise; their recipes no-op locally with an
 install hint and CI enforces them.
 
+Day-to-day commands, the recipe cheat-sheet, and IDE setup live in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
 ## Commit messages
 
 [Conventional Commits](https://www.conventionalcommits.org/). The commit-msg hook (`committed`) enforces the
@@ -47,7 +49,7 @@ type prefix; scope is optional. Allowed types: `feat` / `fix` / `docs` / `style`
   updated `packages.lock.json`.
 - New GitHub Actions must be SHA-pinned (with a trailing version comment).
 - Keep the architecture layered: `Domain` → `Application` → `Infrastructure` → `App` (WinUI). Domain has no
-  framework dependencies.
+  framework dependencies. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - Record architecturally significant decisions as [ADRs](docs/ADR_INDEX.md) under `docs/adr/`.
 
 ## Pull requests
