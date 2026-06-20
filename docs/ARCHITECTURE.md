@@ -69,13 +69,13 @@ runs as hosted services (`ClipboardMonitorHostedService`, `RetentionHostedServic
 
 ## Where do I add X?
 
-| I want to add…                | Layer          | Typical location                                  | Notes |
-| ----------------------------- | -------------- | ------------------------------------------------- | ----- |
-| A new secret/classifier       | Application    | `Capture/Classifiers/` + register in `AddApplication` | Implements `IClipboardContentClassifier`. |
-| A new capture rule            | Application    | `Capture/Rules/` + register in `AddApplication`   | Registration order = evaluation order (rejection-first). |
-| A new storage backend         | Infrastructure | `Persistence/` + wire in `AddInfrastructure`      | Implements `IClipboardHistoryRepository`. |
-| A new clipboard content type  | Domain + Infra | `ValueObjects/ClipContentType` + `Clipboard/`     | Extend the enum, then handle it in capture/write. |
-| A UI window or page           | App            | `*.xaml` + view model in `ViewModels/`            | Register presentation services in `AddPresentation`. |
-| A new persisted setting       | Application + Infra | `Settings/` (both layers)                    | Model in Application, persistence in Infrastructure. |
-| A background job              | Infrastructure | `Hosting/` + `AddHostedService` in `AddInfrastructure` | Implement `IHostedService` / `BackgroundService`. |
-| A new localized string        | App            | `Localization/Strings/{en,ja,zh-Hans}.json`       | Reference via `{loc:Str Key=…}`; add to every language. |
+| I want to add...             | Layer               | Typical location                                       | Notes                                                     |
+| ---------------------------- | ------------------- | ------------------------------------------------------ | --------------------------------------------------------- |
+| A new secret/classifier      | Application         | `Capture/Classifiers/` + register in `AddApplication`  | Implements `IClipboardContentClassifier`.                 |
+| A new capture rule           | Application         | `Capture/Rules/` + register in `AddApplication`        | Registration order = evaluation order (rejection-first).  |
+| A new storage backend        | Infrastructure      | `Persistence/` + wire in `AddInfrastructure`           | Implements `IClipboardHistoryRepository`.                 |
+| A new clipboard content type | Domain + Infra      | `ValueObjects/ClipContentType` + `Clipboard/`          | Extend the enum, then handle it in capture/write.         |
+| A UI window or page          | App                 | `*.xaml` + view model in `ViewModels/`                 | Register presentation services in `AddPresentation`.      |
+| A new persisted setting      | Application + Infra | `Settings/` (both layers)                              | Model in Application, persistence in Infrastructure.      |
+| A background job             | Infrastructure      | `Hosting/` + `AddHostedService` in `AddInfrastructure` | Implement `IHostedService` / `BackgroundService`.         |
+| A new localized string       | App                 | `Localization/Strings/{en,ja,zh-Hans}.json`            | Reference via `{loc:Str Key=...}`; add to every language. |

@@ -27,20 +27,20 @@ source of truth — `just` lists every recipe). For contribution policy and the 
 
 The daily subset. `just` lists everything; see the [Justfile](../Justfile) for the rest.
 
-| Recipe                  | Does |
-| ----------------------- | ---- |
-| `bootstrap`             | One-time onboarding: toolchain, hooks, tools, restore. |
-| `build`                 | Build the App (x64). |
-| `run`                   | Stop → build → launch (unpackaged). |
-| `check`                 | Fast inner-loop check (incremental build + fmt-check + strict-code). |
-| `watch-check`           | Recompile the App on every change. |
-| `fix`                   | Auto-fix whitespace, code style, typos. |
-| `fmt` / `fmt-check`     | Apply / verify formatting. |
-| `test` / `test-one`     | Run all / a single test project. |
-| `watch-test <Project>`  | Re-run a test project on change. |
-| `lint`                  | Full static gate (no tests). |
-| `analyze`              | Build every project with warnings-as-errors (the heavy gate). |
-| `doctor`                | Environment health check. |
+| Recipe                 | Does                                                                 |
+| ---------------------- | -------------------------------------------------------------------- |
+| `bootstrap`            | One-time onboarding: toolchain, hooks, tools, restore.               |
+| `build`                | Build the App (x64).                                                 |
+| `run`                  | Stop -> build -> launch (unpackaged).                                |
+| `check`                | Fast inner-loop check (incremental build + fmt-check + strict-code). |
+| `watch-check`          | Recompile the App on every change.                                   |
+| `fix`                  | Auto-fix whitespace, code style, typos.                              |
+| `fmt` / `fmt-check`    | Apply / verify formatting.                                           |
+| `test` / `test-one`    | Run all / a single test project.                                     |
+| `watch-test <Project>` | Re-run a test project on change.                                     |
+| `lint`                 | Full static gate (no tests).                                         |
+| `analyze`              | Build every project with warnings-as-errors (the heavy gate).        |
+| `doctor`               | Environment health check.                                            |
 
 ## Notes
 
