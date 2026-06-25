@@ -3,10 +3,12 @@
     x:Class="ClipVaultApp.SettingsWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:CommunityToolkit.WinUI.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:local="using:ClipVaultApp"
     xmlns:loc="using:ClipVaultApp.Localization"
+    xmlns:local="using:ClipVaultApp"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:ui="using:CommunityToolkit.WinUI"
     xmlns:vm="using:ClipVaultApp.ViewModels"
     Title="ClipVault"
     mc:Ignorable="d">
@@ -58,66 +60,67 @@
             </NavigationView.MenuItems>
 
             <Grid>
-                <!--  ===== 設定ペイン =====  -->
-                <ScrollViewer x:Name="SettingsPane" Padding="24">
-                    <StackPanel MaxWidth="720" Spacing="20">
+                <!--  ===== Settings pane =====  -->
+                <ScrollViewer x:Name="SettingsPane" Padding="{StaticResource PagePadding}">
+                    <StackPanel
+                        MaxWidth="{StaticResource SettingsContentMaxWidth}"
+                        Spacing="{StaticResource SpacingSmall}">
 
-                        <!--  言語 / Language  -->
-                        <Border Style="{StaticResource SettingsSectionStyle}">
-                            <Grid ColumnSpacing="16">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" Spacing="4">
-                                    <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="{loc:Str Key=Settings.Language.Label}" />
-                                    <TextBlock
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{loc:Str Key=Settings.Language.Hint}"
-                                        TextWrapping="Wrap" />
-                                </StackPanel>
-                                <ComboBox
-                                    Grid.Column="1"
-                                    MinWidth="160"
-                                    VerticalAlignment="Center"
-                                    AutomationProperties.AutomationId="LanguageSelector"
-                                    AutomationProperties.Name="{loc:Str Key=Settings.Language.Label}"
-                                    DisplayMemberPath="DisplayName"
-                                    ItemsSource="{x:Bind ViewModel.LanguageOptions, Mode=OneTime}"
-                                    SelectedItem="{x:Bind ViewModel.SelectedLanguage, Mode=TwoWay}" />
-                            </Grid>
-                        </Border>
+                        <!--  Language  -->
+                        <controls:SettingsCard
+                            Description="{loc:Str Key=Settings.Language.Hint}"
+                            Header="{loc:Str Key=Settings.Language.Label}"
+                            HeaderIcon="{ui:FontIcon Glyph=&#xE774;}">
+                            <ComboBox
+                                MinWidth="{StaticResource InputMinWidth}"
+                                AutomationProperties.AutomationId="LanguageSelector"
+                                AutomationProperties.Name="{loc:Str Key=Settings.Language.Label}"
+                                DisplayMemberPath="DisplayName"
+                                ItemsSource="{x:Bind ViewModel.LanguageOptions, Mode=OneTime}"
+                                SelectedItem="{x:Bind ViewModel.SelectedLanguage, Mode=TwoWay}" />
+                        </controls:SettingsCard>
 
-                        <!--  保存方式  -->
-                        <Border Style="{StaticResource SettingsSectionStyle}">
-                            <StackPanel Spacing="12">
-                                <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="{loc:Str Key=Settings.Storage.Header}" />
-                                <RadioButtons AutomationProperties.AutomationId="StorageModeGroup">
-                                    <RadioButton
-                                        AutomationProperties.AutomationId="StorageEncryptedRadio"
-                                        Content="{loc:Str Key=Settings.Storage.Encrypted}"
-                                        IsChecked="{x:Bind ViewModel.IsEncryptedDisk, Mode=TwoWay}" />
-                                    <RadioButton
-                                        AutomationProperties.AutomationId="StorageVolatileRadio"
-                                        Content="{loc:Str Key=Settings.Storage.Volatile}"
-                                        IsChecked="{x:Bind ViewModel.IsVolatileMemory, Mode=TwoWay}" />
-                                </RadioButtons>
-                                <TextBlock
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="{loc:Str Key=Settings.Storage.Hint}"
-                                    TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Border>
+                        <!--  App theme  -->
+                        <controls:SettingsCard
+                            Description="{loc:Str Key=Settings.Theme.Hint}"
+                            Header="{loc:Str Key=Settings.Theme.Label}"
+                            HeaderIcon="{ui:FontIcon Glyph=&#xE771;}">
+                            <ComboBox
+                                MinWidth="{StaticResource InputMinWidth}"
+                                AutomationProperties.AutomationId="ThemeSelector"
+                                AutomationProperties.Name="{loc:Str Key=Settings.Theme.Label}"
+                                DisplayMemberPath="DisplayName"
+                                ItemsSource="{x:Bind ViewModel.ThemeOptions, Mode=OneTime}"
+                                SelectedItem="{x:Bind ViewModel.SelectedTheme, Mode=TwoWay}" />
+                        </controls:SettingsCard>
 
-                        <!--  鍵の保護（パスフレーズ／Windows Hello のいずれか一方）  -->
-                        <Border
-                            Style="{StaticResource SettingsSectionStyle}"
+                        <!--  Storage mode  -->
+                        <controls:SettingsCard
+                            ContentAlignment="Vertical"
+                            Description="{loc:Str Key=Settings.Storage.Hint}"
+                            Header="{loc:Str Key=Settings.Storage.Header}"
+                            HeaderIcon="{ui:FontIcon Glyph=&#xE8B7;}">
+                            <RadioButtons AutomationProperties.AutomationId="StorageModeGroup">
+                                <RadioButton
+                                    AutomationProperties.AutomationId="StorageEncryptedRadio"
+                                    Content="{loc:Str Key=Settings.Storage.Encrypted}"
+                                    IsChecked="{x:Bind ViewModel.IsEncryptedDisk, Mode=TwoWay}" />
+                                <RadioButton
+                                    AutomationProperties.AutomationId="StorageVolatileRadio"
+                                    Content="{loc:Str Key=Settings.Storage.Volatile}"
+                                    IsChecked="{x:Bind ViewModel.IsVolatileMemory, Mode=TwoWay}" />
+                            </RadioButtons>
+                        </controls:SettingsCard>
+
+                        <!--  Key protection (passphrase / Windows Hello, mutually exclusive)  -->
+                        <controls:SettingsCard
+                            ContentAlignment="Vertical"
+                            Description="{loc:Str Key=Settings.Protection.Hint}"
+                            Header="{loc:Str Key=Settings.Protection.Header}"
+                            HeaderIcon="{ui:FontIcon Glyph=&#xE72E;}"
                             Visibility="{x:Bind local:SettingsWindow.BoolToVisibility(ViewModel.IsPassphraseSectionVisible), Mode=OneWay}">
-                            <StackPanel Spacing="12">
-                                <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="{loc:Str Key=Settings.Protection.Header}" />
-                                <StackPanel Orientation="Horizontal" Spacing="8">
+                            <StackPanel Spacing="{StaticResource SpacingMedium}">
+                                <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSmall}">
                                     <TextBlock
                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                         Text="{loc:Str Key=Settings.Protection.Current}" />
@@ -126,13 +129,8 @@
                                         Style="{StaticResource BodyStrongTextBlockStyle}"
                                         Text="{x:Bind ViewModel.ProtectionDisplay, Mode=OneWay}" />
                                 </StackPanel>
-                                <TextBlock
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="{loc:Str Key=Settings.Protection.Hint}"
-                                    TextWrapping="Wrap" />
 
-                                <!--  共有フィードバック（パスフレーズ／Hello 両操作の結果を表示）  -->
+                                <!--  Shared feedback (passphrase / Hello operation results)  -->
                                 <InfoBar
                                     AutomationProperties.AutomationId="PassphraseErrorBar"
                                     IsClosable="False"
@@ -146,7 +144,7 @@
                                     Message="{x:Bind ViewModel.PassphraseSuccess, Mode=OneWay}"
                                     Severity="Success" />
 
-                                <!--  現在のパスフレーズ（パスフレーズ保護中のみ：変更／解除／Hello 切替に使用）  -->
+                                <!--  Current passphrase (only while passphrase-protected: change / remove / switch to Hello)  -->
                                 <PasswordBox
                                     x:Name="CurrentPassphraseBox"
                                     AutomationProperties.AutomationId="CurrentPassphraseBox"
@@ -156,9 +154,9 @@
                                     PlaceholderText="{loc:Str Key=Settings.Passphrase.CurrentPlaceholder}"
                                     Visibility="{x:Bind local:SettingsWindow.BoolToVisibility(ViewModel.HasPassphrase), Mode=OneWay}" />
 
-                                <!--  パスフレーズの設定／変更／解除（DPAPI のみ／パスフレーズのとき。Hello 中は非表示）  -->
+                                <!--  Set / change / remove passphrase (DPAPI-only or passphrase mode; hidden under Hello)  -->
                                 <StackPanel
-                                    Spacing="12"
+                                    Spacing="{StaticResource SpacingMedium}"
                                     Visibility="{x:Bind local:SettingsWindow.BoolToVisibility(ViewModel.IsPassphraseControlsVisible), Mode=OneWay}">
                                     <PasswordBox
                                         x:Name="NewPassphraseBox"
@@ -176,7 +174,7 @@
                                         PasswordChanged="OnConfirmPassphraseChanged"
                                         PlaceholderText="{loc:Str Key=Settings.Passphrase.ConfirmPlaceholder}" />
 
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSmall}">
                                         <Button
                                             AutomationProperties.AutomationId="SavePassphraseButton"
                                             Command="{x:Bind ViewModel.SavePassphraseCommand}"
@@ -190,8 +188,8 @@
                                             IsEnabled="{x:Bind local:SettingsWindow.IsNot(ViewModel.IsPassphraseBusy), Mode=OneWay}"
                                             Visibility="{x:Bind local:SettingsWindow.BoolToVisibility(ViewModel.HasPassphrase), Mode=OneWay}" />
                                         <ProgressRing
-                                            Width="20"
-                                            Height="20"
+                                            Width="{StaticResource ProgressRingSize}"
+                                            Height="{StaticResource ProgressRingSize}"
                                             VerticalAlignment="Center"
                                             IsActive="{x:Bind ViewModel.IsPassphraseBusy, Mode=OneWay}" />
                                     </StackPanel>
@@ -199,14 +197,14 @@
 
                                 <!--  Windows Hello  -->
                                 <Border
+                                    Padding="{StaticResource SubsectionDividerPadding}"
                                     BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
-                                    BorderThickness="0,1,0,0"
-                                    Padding="0,12,0,0">
-                                    <StackPanel Spacing="12">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                    BorderThickness="{StaticResource SubsectionDividerThickness}">
+                                    <StackPanel Spacing="{StaticResource SpacingMedium}">
+                                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSmall}">
                                             <FontIcon
                                                 VerticalAlignment="Center"
-                                                FontSize="16"
+                                                FontSize="{StaticResource IconSizeMedium}"
                                                 Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
                                                 Glyph="&#xE8FB;" />
                                             <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Windows Hello" />
@@ -217,7 +215,7 @@
                                             Text="{loc:Str Key=Settings.Hello.Hint}"
                                             TextWrapping="Wrap" />
 
-                                        <!--  利用不可のヒント（この PC で Hello が使えないとき）  -->
+                                        <!--  Unavailable hint (when Hello cannot be used on this PC)  -->
                                         <InfoBar
                                             AutomationProperties.AutomationId="HelloUnavailableBar"
                                             IsClosable="False"
@@ -225,7 +223,7 @@
                                             Message="{loc:Str Key=Settings.Hello.Unavailable}"
                                             Severity="Informational" />
 
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSmall}">
                                             <Button
                                                 AutomationProperties.AutomationId="EnableHelloButton"
                                                 Command="{x:Bind ViewModel.EnableHelloCommand}"
@@ -248,18 +246,16 @@
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
-                        </Border>
+                        </controls:SettingsCard>
 
-                        <!--  除外アプリ  -->
-                        <Border Style="{StaticResource SettingsSectionStyle}">
-                            <StackPanel Spacing="12">
-                                <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="{loc:Str Key=Settings.Excluded.Header}" />
-                                <TextBlock
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="{loc:Str Key=Settings.Excluded.Hint}"
-                                    TextWrapping="Wrap" />
-                                <Grid ColumnSpacing="8">
+                        <!--  Excluded apps  -->
+                        <controls:SettingsCard
+                            ContentAlignment="Vertical"
+                            Description="{loc:Str Key=Settings.Excluded.Hint}"
+                            Header="{loc:Str Key=Settings.Excluded.Header}"
+                            HeaderIcon="{ui:FontIcon Glyph=&#xE71D;}">
+                            <StackPanel Spacing="{StaticResource SpacingMedium}">
+                                <Grid ColumnSpacing="{StaticResource SpacingSmall}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
@@ -284,7 +280,7 @@
                                     ItemsSource="{x:Bind ViewModel.ExcludedApps, Mode=OneWay}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:ExcludedAppViewModel">
-                                            <Grid Padding="12,6" ColumnSpacing="8">
+                                            <Grid Padding="{StaticResource ExclusionRowPadding}" ColumnSpacing="{StaticResource SpacingSmall}">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
@@ -301,155 +297,118 @@
                                                     CommandParameter="{x:Bind}"
                                                     Style="{StaticResource SubtleButtonStyle}"
                                                     ToolTipService.ToolTip="{loc:Str Key=Settings.Excluded.RemoveTooltip}">
-                                                    <FontIcon FontSize="14" Glyph="&#xE74D;" />
+                                                    <FontIcon FontSize="{StaticResource IconSizeSmall}" Glyph="&#xE74D;" />
                                                 </Button>
                                             </Grid>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </StackPanel>
-                        </Border>
+                        </controls:SettingsCard>
 
-                        <!--  汎用パスワードのマスク  -->
-                        <Border Style="{StaticResource SettingsSectionStyle}">
-                            <Grid ColumnSpacing="16">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" Spacing="4">
-                                    <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="{loc:Str Key=Settings.Mask.Header}" />
+                        <!--  Mask generic passwords  -->
+                        <controls:SettingsCard
+                            Description="{loc:Str Key=Settings.Mask.Hint}"
+                            Header="{loc:Str Key=Settings.Mask.Header}"
+                            HeaderIcon="{ui:FontIcon Glyph=&#xED1A;}">
+                            <ToggleSwitch
+                                AutomationProperties.AutomationId="MaskPasswordsToggle"
+                                AutomationProperties.Name="{loc:Str Key=Settings.Mask.Header}"
+                                IsOn="{x:Bind ViewModel.MaskGenericPasswords, Mode=TwoWay}" />
+                        </controls:SettingsCard>
+
+                        <!--  Strip URL tracking parameters  -->
+                        <controls:SettingsCard
+                            Description="{loc:Str Key=Settings.StripTracking.Hint}"
+                            Header="{loc:Str Key=Settings.StripTracking.Header}"
+                            HeaderIcon="{ui:FontIcon Glyph=&#xE71B;}">
+                            <ToggleSwitch
+                                AutomationProperties.AutomationId="StripTrackingToggle"
+                                AutomationProperties.Name="{loc:Str Key=Settings.StripTracking.Header}"
+                                IsOn="{x:Bind ViewModel.StripTrackingParameters, Mode=TwoWay}" />
+                        </controls:SettingsCard>
+
+                        <!--  Retention  -->
+                        <controls:SettingsExpander
+                            Description="{loc:Str Key=Settings.Retention.Hint}"
+                            Header="{loc:Str Key=Settings.Retention.Header}"
+                            HeaderIcon="{ui:FontIcon Glyph=&#xE787;}">
+                            <controls:SettingsExpander.Items>
+                                <controls:SettingsCard Header="{loc:Str Key=Settings.Retention.MaxDays}">
+                                    <NumberBox
+                                        MinWidth="{StaticResource InputMinWidth}"
+                                        AutomationProperties.AutomationId="MaxAgeDaysBox"
+                                        AutomationProperties.Name="{loc:Str Key=Settings.Retention.MaxDays}"
+                                        Maximum="3650"
+                                        Minimum="1"
+                                        SmallChange="1"
+                                        SpinButtonPlacementMode="Inline"
+                                        Value="{x:Bind ViewModel.MaxAgeDaysValue, Mode=TwoWay}" />
+                                </controls:SettingsCard>
+                                <controls:SettingsCard Header="{loc:Str Key=Settings.Retention.MaxEntries}">
+                                    <NumberBox
+                                        MinWidth="{StaticResource InputMinWidth}"
+                                        AutomationProperties.AutomationId="MaxEntriesBox"
+                                        AutomationProperties.Name="{loc:Str Key=Settings.Retention.MaxEntries}"
+                                        Maximum="100000"
+                                        Minimum="1"
+                                        SmallChange="10"
+                                        SpinButtonPlacementMode="Inline"
+                                        Value="{x:Bind ViewModel.MaxEntriesValue, Mode=TwoWay}" />
+                                </controls:SettingsCard>
+                            </controls:SettingsExpander.Items>
+                        </controls:SettingsExpander>
+
+                        <!--  Auto start  -->
+                        <controls:SettingsCard
+                            Description="{loc:Str Key=Settings.AutoStart.Hint}"
+                            Header="{loc:Str Key=Settings.AutoStart.Header}"
+                            HeaderIcon="{ui:FontIcon Glyph=&#xE7E8;}">
+                            <ToggleSwitch
+                                AutomationProperties.AutomationId="RunAtStartupToggle"
+                                AutomationProperties.Name="{loc:Str Key=Settings.AutoStart.Header}"
+                                IsOn="{x:Bind ViewModel.RunAtStartup, Mode=TwoWay}" />
+                        </controls:SettingsCard>
+
+                        <!--  Panic wipe (destructive)  -->
+                        <controls:SettingsCard
+                            Description="{loc:Str Key=Settings.Panic.Hint}"
+                            Header="{loc:Str Key=Settings.Panic.Header}">
+                            <controls:SettingsCard.HeaderIcon>
+                                <FontIcon Foreground="{ThemeResource SystemFillColorCriticalBrush}" Glyph="&#xE814;" />
+                            </controls:SettingsCard.HeaderIcon>
+                            <Button
+                                AutomationProperties.AutomationId="PanicWipeButton"
+                                AutomationProperties.Name="{loc:Str Key=Settings.Panic.Name}"
+                                Command="{x:Bind ViewModel.PanicWipeCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSmall}">
+                                    <FontIcon
+                                        FontSize="{StaticResource IconSizeMedium}"
+                                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                        Glyph="&#xE74D;" />
                                     <TextBlock
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{loc:Str Key=Settings.Mask.Hint}"
-                                        TextWrapping="Wrap" />
+                                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                        Text="{loc:Str Key=Settings.Panic.Button}" />
                                 </StackPanel>
-                                <ToggleSwitch
-                                    Grid.Column="1"
-                                    VerticalAlignment="Center"
-                                    AutomationProperties.AutomationId="MaskPasswordsToggle"
-                                    AutomationProperties.Name="{loc:Str Key=Settings.Mask.Header}"
-                                    IsOn="{x:Bind ViewModel.MaskGenericPasswords, Mode=TwoWay}" />
-                            </Grid>
-                        </Border>
-
-                        <!--  URL の追跡パラメータ除去  -->
-                        <Border Style="{StaticResource SettingsSectionStyle}">
-                            <Grid ColumnSpacing="16">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" Spacing="4">
-                                    <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="{loc:Str Key=Settings.StripTracking.Header}" />
-                                    <TextBlock
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{loc:Str Key=Settings.StripTracking.Hint}"
-                                        TextWrapping="Wrap" />
-                                </StackPanel>
-                                <ToggleSwitch
-                                    Grid.Column="1"
-                                    VerticalAlignment="Center"
-                                    AutomationProperties.AutomationId="StripTrackingToggle"
-                                    AutomationProperties.Name="{loc:Str Key=Settings.StripTracking.Header}"
-                                    IsOn="{x:Bind ViewModel.StripTrackingParameters, Mode=TwoWay}" />
-                            </Grid>
-                        </Border>
-
-                        <!--  保持  -->
-                        <Border Style="{StaticResource SettingsSectionStyle}">
-                            <StackPanel Spacing="12">
-                                <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="{loc:Str Key=Settings.Retention.Header}" />
-                                <TextBlock
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="{loc:Str Key=Settings.Retention.Hint}"
-                                    TextWrapping="Wrap" />
-                                <NumberBox
-                                    AutomationProperties.AutomationId="MaxAgeDaysBox"
-                                    AutomationProperties.Name="{loc:Str Key=Settings.Retention.MaxDays}"
-                                    Header="{loc:Str Key=Settings.Retention.MaxDays}"
-                                    Maximum="3650"
-                                    Minimum="1"
-                                    SmallChange="1"
-                                    SpinButtonPlacementMode="Inline"
-                                    Value="{x:Bind ViewModel.MaxAgeDaysValue, Mode=TwoWay}" />
-                                <NumberBox
-                                    AutomationProperties.AutomationId="MaxEntriesBox"
-                                    AutomationProperties.Name="{loc:Str Key=Settings.Retention.MaxEntries}"
-                                    Header="{loc:Str Key=Settings.Retention.MaxEntries}"
-                                    Maximum="100000"
-                                    Minimum="1"
-                                    SmallChange="10"
-                                    SpinButtonPlacementMode="Inline"
-                                    Value="{x:Bind ViewModel.MaxEntriesValue, Mode=TwoWay}" />
-                            </StackPanel>
-                        </Border>
-
-                        <!--  自動起動  -->
-                        <Border Style="{StaticResource SettingsSectionStyle}">
-                            <Grid ColumnSpacing="16">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" Spacing="4">
-                                    <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="{loc:Str Key=Settings.AutoStart.Header}" />
-                                    <TextBlock
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{loc:Str Key=Settings.AutoStart.Hint}"
-                                        TextWrapping="Wrap" />
-                                </StackPanel>
-                                <ToggleSwitch
-                                    Grid.Column="1"
-                                    VerticalAlignment="Center"
-                                    AutomationProperties.AutomationId="RunAtStartupToggle"
-                                    AutomationProperties.Name="{loc:Str Key=Settings.AutoStart.Header}"
-                                    IsOn="{x:Bind ViewModel.RunAtStartup, Mode=TwoWay}" />
-                            </Grid>
-                        </Border>
-
-                        <!--  パニックワイプ（破壊的）  -->
-                        <Border Style="{StaticResource SettingsDangerSectionStyle}">
-                            <StackPanel Spacing="12">
-                                <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="{loc:Str Key=Settings.Panic.Header}" />
-                                <TextBlock
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Text="{loc:Str Key=Settings.Panic.Hint}"
-                                    TextWrapping="Wrap" />
-                                <Button
-                                    AutomationProperties.AutomationId="PanicWipeButton"
-                                    AutomationProperties.Name="{loc:Str Key=Settings.Panic.Name}"
-                                    Command="{x:Bind ViewModel.PanicWipeCommand}">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <FontIcon
-                                            FontSize="16"
-                                            Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                                            Glyph="&#xE74D;" />
-                                        <TextBlock
-                                            Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                                            Text="{loc:Str Key=Settings.Panic.Button}" />
-                                    </StackPanel>
-                                </Button>
-                            </StackPanel>
-                        </Border>
+                            </Button>
+                        </controls:SettingsCard>
                     </StackPanel>
                 </ScrollViewer>
 
-                <!--  ===== プライバシーペイン =====  -->
+                <!--  ===== Privacy pane =====  -->
                 <ScrollViewer
                     x:Name="PrivacyPane"
-                    Padding="24"
+                    Padding="{StaticResource PagePadding}"
                     Visibility="Collapsed">
-                    <StackPanel MaxWidth="720" Spacing="20">
-                        <Border Style="{StaticResource SettingsSectionStyle}">
-                            <StackPanel Spacing="12">
-                                <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="{loc:Str Key=Settings.Privacy.Status}" />
-                                <Grid ColumnSpacing="16" RowSpacing="8">
+                    <StackPanel
+                        MaxWidth="{StaticResource SettingsContentMaxWidth}"
+                        Spacing="{StaticResource SpacingSmall}">
+                        <controls:SettingsCard
+                            ContentAlignment="Vertical"
+                            Header="{loc:Str Key=Settings.Privacy.Status}"
+                            HeaderIcon="{ui:FontIcon Glyph=&#xE72E;}">
+                            <StackPanel Spacing="{StaticResource SpacingMedium}">
+                                <Grid ColumnSpacing="{StaticResource SpacingLarge}" RowSpacing="{StaticResource SpacingSmall}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
@@ -489,88 +448,83 @@
                                     TextWrapping="Wrap"
                                     Visibility="{x:Bind local:SettingsWindow.BoolToVisibility(ViewModel.IsStorageRestartPending), Mode=OneWay}" />
                             </StackPanel>
-                        </Border>
+                        </controls:SettingsCard>
 
-                        <Border Style="{StaticResource SettingsSectionStyle}">
-                            <StackPanel Spacing="12">
-                                <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="{loc:Str Key=Settings.Privacy.Guarantee}" />
-                                <StackPanel Spacing="8">
-                                    <!-- Each row is a Grid (Auto icon + * text) so the text wraps to the available
-                                         width and follows the window size instead of overflowing at a fixed width. -->
-                                    <Grid ColumnSpacing="12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <FontIcon
-                                            VerticalAlignment="Top"
-                                            FontSize="16"
-                                            Foreground="{ThemeResource SystemFillColorSuccessBrush}"
-                                            Glyph="&#xE73E;" />
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            MaxWidth="640"
-                                            HorizontalAlignment="Left"
-                                            Text="{loc:Str Key=Settings.Privacy.Network}"
-                                            TextWrapping="Wrap" />
-                                    </Grid>
-                                    <Grid ColumnSpacing="12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <FontIcon
-                                            VerticalAlignment="Top"
-                                            FontSize="16"
-                                            Foreground="{ThemeResource SystemFillColorSuccessBrush}"
-                                            Glyph="&#xE73E;" />
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            MaxWidth="640"
-                                            HorizontalAlignment="Left"
-                                            Text="{loc:Str Key=Settings.Privacy.Telemetry}"
-                                            TextWrapping="Wrap" />
-                                    </Grid>
-                                    <Grid ColumnSpacing="12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <FontIcon
-                                            VerticalAlignment="Top"
-                                            FontSize="16"
-                                            Foreground="{ThemeResource SystemFillColorSuccessBrush}"
-                                            Glyph="&#xE72E;" />
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            MaxWidth="640"
-                                            HorizontalAlignment="Left"
-                                            AutomationProperties.AutomationId="PrivacyGuaranteeDisplay"
-                                            Text="{x:Bind ViewModel.AtRestGuarantee, Mode=OneWay}"
-                                            TextWrapping="Wrap" />
-                                    </Grid>
-                                    <Grid ColumnSpacing="12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <FontIcon
-                                            VerticalAlignment="Top"
-                                            FontSize="16"
-                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                            Glyph="&#xE946;" />
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            MaxWidth="640"
-                                            HorizontalAlignment="Left"
-                                            AutomationProperties.AutomationId="PrivacyExtraDisplay"
-                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                            Text="{x:Bind ViewModel.ExtraProtection, Mode=OneWay}"
-                                            TextWrapping="Wrap" />
-                                    </Grid>
-                                </StackPanel>
+                        <controls:SettingsCard
+                            ContentAlignment="Vertical"
+                            Header="{loc:Str Key=Settings.Privacy.Guarantee}"
+                            HeaderIcon="{ui:FontIcon Glyph=&#xE73E;}">
+                            <StackPanel Spacing="{StaticResource SpacingSmall}">
+                                <!--  Each row is a Grid (Auto icon + * text) so the text wraps to the available width.  -->
+                                <Grid ColumnSpacing="{StaticResource SpacingMedium}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon
+                                        VerticalAlignment="Top"
+                                        FontSize="{StaticResource IconSizeMedium}"
+                                        Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                                        Glyph="&#xE73E;" />
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        HorizontalAlignment="Left"
+                                        Text="{loc:Str Key=Settings.Privacy.Network}"
+                                        TextWrapping="Wrap" />
+                                </Grid>
+                                <Grid ColumnSpacing="{StaticResource SpacingMedium}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon
+                                        VerticalAlignment="Top"
+                                        FontSize="{StaticResource IconSizeMedium}"
+                                        Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                                        Glyph="&#xE73E;" />
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        HorizontalAlignment="Left"
+                                        Text="{loc:Str Key=Settings.Privacy.Telemetry}"
+                                        TextWrapping="Wrap" />
+                                </Grid>
+                                <Grid ColumnSpacing="{StaticResource SpacingMedium}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon
+                                        VerticalAlignment="Top"
+                                        FontSize="{StaticResource IconSizeMedium}"
+                                        Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                                        Glyph="&#xE72E;" />
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        HorizontalAlignment="Left"
+                                        AutomationProperties.AutomationId="PrivacyGuaranteeDisplay"
+                                        Text="{x:Bind ViewModel.AtRestGuarantee, Mode=OneWay}"
+                                        TextWrapping="Wrap" />
+                                </Grid>
+                                <Grid ColumnSpacing="{StaticResource SpacingMedium}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon
+                                        VerticalAlignment="Top"
+                                        FontSize="{StaticResource IconSizeMedium}"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Glyph="&#xE946;" />
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        HorizontalAlignment="Left"
+                                        AutomationProperties.AutomationId="PrivacyExtraDisplay"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Text="{x:Bind ViewModel.ExtraProtection, Mode=OneWay}"
+                                        TextWrapping="Wrap" />
+                                </Grid>
                             </StackPanel>
-                        </Border>
+                        </controls:SettingsCard>
                     </StackPanel>
                 </ScrollViewer>
             </Grid>

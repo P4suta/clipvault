@@ -45,4 +45,7 @@ public sealed record ClipVaultSettings
 
     /// <summary>Gets the UI language. The default follows the OS display language. Changes take effect after a restart.</summary>
     public AppLanguage Language { get; init; } = AppLanguage.System;
+
+    /// <summary>Gets the UI theme. The default follows the OS theme. Changes are applied immediately (no restart).</summary>
+    public AppTheme Theme { get; init; } = AppTheme.System;
 }

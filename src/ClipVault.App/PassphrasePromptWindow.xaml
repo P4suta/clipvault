@@ -13,7 +13,7 @@
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
-    <Grid Padding="24" RowSpacing="16">
+    <Grid Padding="{StaticResource PagePadding}" RowSpacing="{StaticResource SpacingLarge}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -22,10 +22,10 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Spacing="8">
+        <StackPanel Grid.Row="0" Spacing="{StaticResource SpacingSmall}">
             <FontIcon
                 HorizontalAlignment="Left"
-                FontSize="28"
+                FontSize="{StaticResource IconSizeHero}"
                 Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
                 Glyph="&#xE72E;" />
             <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="{loc:Str Key=Unlock.Header}" />
@@ -57,12 +57,12 @@
         <ProgressRing
             x:Name="BusyRing"
             Grid.Row="3"
-            Width="20"
-            Height="20"
+            Width="{StaticResource ProgressRingSize}"
+            Height="{StaticResource ProgressRingSize}"
             HorizontalAlignment="Left"
             IsActive="False" />
 
-        <Grid Grid.Row="4" ColumnSpacing="8">
+        <Grid Grid.Row="4" ColumnSpacing="{StaticResource SpacingSmall}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -80,7 +80,7 @@
             <Button
                 x:Name="UnlockButton"
                 Grid.Column="1"
-                MinWidth="120"
+                MinWidth="{StaticResource DialogButtonMinWidth}"
                 AutomationProperties.AutomationId="StartupUnlockButton"
                 AutomationProperties.Name="{loc:Str Key=Unlock.Unlock}"
                 Click="OnUnlockClick"

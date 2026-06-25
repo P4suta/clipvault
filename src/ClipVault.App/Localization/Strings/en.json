@@ -46,6 +46,12 @@
   "Settings.Language.Hint": "Changes take effect after a restart.",
   "Settings.Language.System": "System default",
 
+  "Settings.Theme.Label": "App theme",
+  "Settings.Theme.Hint": "Choose light, dark, or follow the system theme. Applied immediately.",
+  "Settings.Theme.System": "System default",
+  "Settings.Theme.Light": "Light",
+  "Settings.Theme.Dark": "Dark",
+
   "Settings.Storage.Header": "Storage",
   "Settings.Storage.Encrypted": "Encrypted disk (kept across restarts)",
   "Settings.Storage.Volatile": "Volatile memory (nothing left on disk)",

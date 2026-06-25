@@ -46,6 +46,12 @@
   "Settings.Language.Hint": "更改将在重新启动后生效。",
   "Settings.Language.System": "跟随系统",
 
+  "Settings.Theme.Label": "应用主题",
+  "Settings.Theme.Hint": "选择浅色、深色或跟随系统主题（立即生效）。",
+  "Settings.Theme.System": "跟随系统",
+  "Settings.Theme.Light": "浅色",
+  "Settings.Theme.Dark": "深色",
+
   "Settings.Storage.Header": "存储方式",
   "Settings.Storage.Encrypted": "加密磁盘（重启后保留）",
   "Settings.Storage.Volatile": "易失性内存（不写入磁盘）",

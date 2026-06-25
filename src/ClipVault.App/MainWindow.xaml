@@ -27,11 +27,11 @@
             </TitleBar.IconSource>
         </TitleBar>
 
-        <!--  操作バー: 検索 / 絞り込み(漏斗) / その他(歯車)  -->
+        <!--  Command bar: search / filter (funnel) / more (gear)  -->
         <Grid
             Grid.Row="1"
-            Padding="16,12"
-            ColumnSpacing="8"
+            Padding="{StaticResource ToolbarPadding}"
+            ColumnSpacing="{StaticResource SpacingSmall}"
             Visibility="{x:Bind local:MainWindow.BoolToVisibilityInverse(ViewModel.IsDetailOpen), Mode=OneWay}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -39,28 +39,29 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <TextBox
+            <AutoSuggestBox
                 x:Name="SearchBox"
                 Grid.Column="0"
                 AutomationProperties.AutomationId="SearchBox"
                 AutomationProperties.Name="{loc:Str Key=Main.Search.Placeholder}"
                 PlaceholderText="{loc:Str Key=Main.Search.Placeholder}"
+                QueryIcon="Find"
                 Text="{x:Bind ViewModel.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-            <!--  絞り込み: 種別 / アプリ を一つのフライアウトに集約（有効時はアクセントの点で表示）  -->
+            <!--  Filter: kind / app in a single flyout (an accent dot marks an active filter)  -->
             <Button
                 x:Name="FilterButton"
                 Grid.Column="1"
-                MinWidth="40"
+                MinWidth="{StaticResource ToolbarButtonMinWidth}"
                 AutomationProperties.AutomationId="FilterButton"
                 AutomationProperties.Name="{loc:Str Key=Main.Filter.Button}"
                 ToolTipService.ToolTip="{loc:Str Key=Main.Filter.Button}">
                 <Grid>
-                    <FontIcon FontSize="16" Glyph="&#xE71C;" />
+                    <FontIcon FontSize="{StaticResource IconSizeMedium}" Glyph="&#xE71C;" />
                     <Ellipse
-                        Width="6"
-                        Height="6"
-                        Margin="0,-2,-2,0"
+                        Width="{StaticResource FilterIndicatorSize}"
+                        Height="{StaticResource FilterIndicatorSize}"
+                        Margin="{StaticResource FilterIndicatorMargin}"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top"
                         Fill="{ThemeResource AccentFillColorDefaultBrush}"
@@ -68,7 +69,7 @@
                 </Grid>
                 <Button.Flyout>
                     <Flyout>
-                        <StackPanel MinWidth="220" Spacing="8">
+                        <StackPanel MinWidth="{StaticResource FlyoutMinWidth}" Spacing="{StaticResource SpacingSmall}">
                             <TextBlock
                                 Style="{StaticResource BodyStrongTextBlockStyle}"
                                 Text="{loc:Str Key=Main.Filter.KindLabel}" />
@@ -96,15 +97,15 @@
                 </Button.Flyout>
             </Button>
 
-            <!--  その他: 一時停止 / すべて消去 / 設定 をメニューに集約  -->
+            <!--  More: pause / clear all / settings in a menu  -->
             <Button
                 x:Name="OverflowButton"
                 Grid.Column="2"
-                MinWidth="40"
+                MinWidth="{StaticResource ToolbarButtonMinWidth}"
                 AutomationProperties.AutomationId="OverflowButton"
                 AutomationProperties.Name="{loc:Str Key=Main.More.Name}"
                 ToolTipService.ToolTip="{loc:Str Key=Main.More.Name}">
-                <FontIcon FontSize="16" Glyph="&#xE713;" />
+                <FontIcon FontSize="{StaticResource IconSizeMedium}" Glyph="&#xE712;" />
                 <Button.Flyout>
                     <MenuFlyout>
                         <ToggleMenuFlyoutItem
@@ -133,39 +134,35 @@
             </Button>
         </Grid>
 
-        <!--  履歴一覧  -->
+        <!--  History list (each entry is a card)  -->
         <Grid Grid.Row="2">
             <ListView
                 x:Name="HistoryList"
-                Padding="8,0,8,8"
+                Padding="{StaticResource ListPadding}"
                 AutomationProperties.AutomationId="HistoryList"
                 AutomationProperties.Name="{loc:Str Key=Main.HistoryList.Name}"
                 IsItemClickEnabled="True"
                 ItemClick="OnItemClick"
+                ItemContainerStyle="{StaticResource EntryCardItemStyle}"
                 ItemsSource="{x:Bind ViewModel.Entries, Mode=OneWay}"
                 KeyDown="OnHistoryListKeyDown"
                 SelectionMode="Single"
                 Visibility="{x:Bind local:MainWindow.BoolToVisibilityInverse(ViewModel.IsDetailOpen), Mode=OneWay}">
-                <ListView.ItemContainerStyle>
-                    <Style TargetType="ListViewItem">
-                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                        <Setter Property="Padding" Value="12,8" />
-                    </Style>
-                </ListView.ItemContainerStyle>
                 <ListView.ItemTemplate>
                     <DataTemplate x:DataType="vm:EntryViewModel">
-                        <Grid ColumnSpacing="12" Loaded="OnEntryRowLoaded">
+                        <Grid ColumnSpacing="{StaticResource SpacingMedium}" Loaded="OnEntryRowLoaded">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
-                            <!--  サムネイル（画像）またはグリフ（テキスト）  -->
+                            <!--  Thumbnail (image) or glyph (text)  -->
                             <Grid
+                                x:Name="EntryThumb"
                                 Grid.Column="0"
-                                Width="40"
-                                Height="40"
+                                Width="{StaticResource ThumbnailSize}"
+                                Height="{StaticResource ThumbnailSize}"
                                 VerticalAlignment="Top">
                                 <Border
                                     Background="{ThemeResource ControlFillColorSecondaryBrush}"
@@ -174,7 +171,7 @@
                                     <FontIcon
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
-                                        FontSize="18"
+                                        FontSize="{StaticResource IconSizeLarge}"
                                         Glyph="&#xE8C8;" />
                                 </Border>
                                 <Image
@@ -184,8 +181,8 @@
                                     Visibility="{x:Bind local:MainWindow.BoolToVisibility(IsImage)}" />
                             </Grid>
 
-                            <!--  プレビュー + 種別バッジ + 発生元/時刻  -->
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                            <!--  Preview + kind badge + source / time  -->
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="{StaticResource SpacingTiny}">
                                 <TextBlock
                                     MaxLines="2"
                                     Text="{x:Bind Preview}"
@@ -193,17 +190,17 @@
                                     TextWrapping="Wrap" />
                                 <StackPanel
                                     Orientation="Horizontal"
-                                    Spacing="6"
+                                    Spacing="{StaticResource SpacingSmall}"
                                     VerticalAlignment="Center">
                                     <Border
-                                        Padding="6,1"
+                                        Padding="{StaticResource BadgePadding}"
                                         VerticalAlignment="Center"
-                                        Background="{ThemeResource ControlFillColorSecondaryBrush}"
-                                        CornerRadius="4"
+                                        Background="{ThemeResource EntryKindBadgeBackgroundBrush}"
+                                        CornerRadius="{StaticResource ControlCornerRadius}"
                                         Visibility="{x:Bind local:MainWindow.BoolToVisibility(HasBadge)}">
                                         <TextBlock
-                                            FontSize="11"
-                                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                            Foreground="{ThemeResource EntryKindBadgeForegroundBrush}"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
                                             Text="{x:Bind KindLabel}" />
                                     </Border>
                                     <TextBlock
@@ -214,20 +211,21 @@
                                 </StackPanel>
                             </StackPanel>
 
-                            <!--  ピン / 削除  -->
+                            <!--  View / pin / delete  -->
                             <StackPanel
                                 Grid.Column="2"
                                 VerticalAlignment="Center"
                                 Orientation="Horizontal"
-                                Spacing="4">
+                                Spacing="{StaticResource SpacingTiny}">
                                 <Button
                                     AutomationProperties.AutomationId="ViewButton"
                                     AutomationProperties.Name="{loc:Str Key=Main.ViewFull.Name}"
+                                    Click="OnViewDetailClick"
                                     Command="{x:Bind local:MainWindow.ViewDetailCommand}"
                                     CommandParameter="{x:Bind}"
                                     Style="{StaticResource SubtleButtonStyle}"
                                     ToolTipService.ToolTip="{loc:Str Key=Main.ViewFull.Name}">
-                                    <FontIcon FontSize="16" Glyph="&#xE890;" />
+                                    <FontIcon FontSize="{StaticResource IconSizeMedium}" Glyph="&#xE890;" />
                                 </Button>
                                 <Button
                                     AutomationProperties.AutomationId="PinButton"
@@ -237,7 +235,7 @@
                                     Style="{StaticResource SubtleButtonStyle}"
                                     ToolTipService.ToolTip="{loc:Str Key=Main.TogglePin.Name}">
                                     <FontIcon
-                                        FontSize="16"
+                                        FontSize="{StaticResource IconSizeMedium}"
                                         Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
                                         Glyph="{x:Bind local:MainWindow.PinGlyph(IsPinned)}" />
                                 </Button>
@@ -248,7 +246,7 @@
                                     CommandParameter="{x:Bind}"
                                     Style="{StaticResource SubtleButtonStyle}"
                                     ToolTipService.ToolTip="{loc:Str Key=Main.Delete.Tooltip}">
-                                    <FontIcon FontSize="16" Glyph="&#xE74D;" />
+                                    <FontIcon FontSize="{StaticResource IconSizeMedium}" Glyph="&#xE74D;" />
                                 </Button>
                             </StackPanel>
                         </Grid>
@@ -256,15 +254,15 @@
                 </ListView.ItemTemplate>
             </ListView>
 
-            <!--  空状態  -->
+            <!--  Empty state  -->
             <StackPanel
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                Spacing="8"
+                Spacing="{StaticResource SpacingSmall}"
                 Visibility="{x:Bind local:MainWindow.BoolToVisibility(ViewModel.IsEmpty), Mode=OneWay}">
                 <FontIcon
                     HorizontalAlignment="Center"
-                    FontSize="40"
+                    FontSize="{StaticResource IconSizeEmptyState}"
                     Foreground="{ThemeResource TextFillColorTertiaryBrush}"
                     Glyph="&#xE8C8;" />
                 <TextBlock
@@ -279,10 +277,10 @@
                     Text="{loc:Str Key=Main.Empty.Subtitle}" />
             </StackPanel>
 
-            <!--  全文表示（読み取り専用・同一画面のインライン切替）  -->
+            <!--  Full-content view (read-only, inline swap on the same screen)  -->
             <Grid
-                Padding="16,12"
-                RowSpacing="12"
+                Padding="{StaticResource DetailPadding}"
+                RowSpacing="{StaticResource SpacingMedium}"
                 Visibility="{x:Bind local:MainWindow.BoolToVisibility(ViewModel.IsDetailOpen), Mode=OneWay}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -293,13 +291,13 @@
                 <StackPanel
                     Grid.Row="0"
                     Orientation="Horizontal"
-                    Spacing="8">
+                    Spacing="{StaticResource SpacingSmall}">
                     <Button
                         AutomationProperties.Name="{loc:Str Key=Main.Detail.Back.Name}"
                         Command="{x:Bind ViewModel.CloseDetailCommand}"
                         Style="{StaticResource SubtleButtonStyle}"
                         ToolTipService.ToolTip="{loc:Str Key=Main.Detail.Back.Name}">
-                        <FontIcon FontSize="16" Glyph="&#xE72B;" />
+                        <FontIcon FontSize="{StaticResource IconSizeMedium}" Glyph="&#xE72B;" />
                     </Button>
                     <TextBlock
                         VerticalAlignment="Center"
@@ -324,7 +322,9 @@
                     HorizontalScrollBarVisibility="Auto"
                     Visibility="{x:Bind local:MainWindow.BoolToVisibility(ViewModel.DetailIsImage), Mode=OneWay}">
                     <Image
+                        x:Name="DetailThumb"
                         AutomationProperties.Name="{loc:Str Key=Main.Detail.Image.Name}"
+                        ImageOpened="OnDetailImageOpened"
                         Source="{x:Bind ViewModel.DetailImageSource, Mode=OneWay}"
                         Stretch="Uniform" />
                 </ScrollViewer>
@@ -333,14 +333,14 @@
                     Grid.Row="2"
                     HorizontalAlignment="Right"
                     Orientation="Horizontal"
-                    Spacing="8">
+                    Spacing="{StaticResource SpacingSmall}">
                     <Button
                         AutomationProperties.AutomationId="CleanUrlButton"
                         Command="{x:Bind ViewModel.CopyCleanedUrlCommand}"
                         ToolTipService.ToolTip="{loc:Str Key=Main.Detail.CleanUrl}"
                         Visibility="{x:Bind local:MainWindow.BoolToVisibility(ViewModel.CanCleanUrl), Mode=OneWay}">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon FontSize="16" Glyph="&#xE894;" />
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSmall}">
+                            <FontIcon FontSize="{StaticResource IconSizeMedium}" Glyph="&#xE894;" />
                             <TextBlock Text="{loc:Str Key=Main.Detail.CleanUrl}" />
                         </StackPanel>
                     </Button>
@@ -349,16 +349,16 @@
                         Command="{x:Bind ViewModel.CopyFormattedJsonCommand}"
                         ToolTipService.ToolTip="{loc:Str Key=Main.Detail.FormatJson}"
                         Visibility="{x:Bind local:MainWindow.BoolToVisibility(ViewModel.CanFormatJson), Mode=OneWay}">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon FontSize="16" Glyph="&#xE943;" />
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSmall}">
+                            <FontIcon FontSize="{StaticResource IconSizeMedium}" Glyph="&#xE943;" />
                             <TextBlock Text="{loc:Str Key=Main.Detail.FormatJson}" />
                         </StackPanel>
                     </Button>
                     <Button
                         Command="{x:Bind ViewModel.CopyDetailCommand}"
                         Style="{StaticResource AccentButtonStyle}">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon FontSize="16" Glyph="&#xE8C8;" />
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource SpacingSmall}">
+                            <FontIcon FontSize="{StaticResource IconSizeMedium}" Glyph="&#xE8C8;" />
                             <TextBlock Text="{loc:Str Key=Main.Detail.Copy}" />
                         </StackPanel>
                     </Button>
