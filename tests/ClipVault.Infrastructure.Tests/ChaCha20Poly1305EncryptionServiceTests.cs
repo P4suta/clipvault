@@ -225,6 +225,35 @@ public class ChaCha20Poly1305EncryptionServiceTests
         Assert.Throws<ObjectDisposedException>(() => service.Encrypt(new byte[] { 1 }));
     }
 
+    [Fact]
+    public void Decrypt_after_dispose_throws()
+    {
+        var service = NewService();
+        var ciphertext = service.Encrypt(new byte[] { 1, 2, 3 });
+        service.Dispose();
+
+        Assert.Throws<ObjectDisposedException>(() => service.Decrypt(ciphertext));
+    }
+
+    [Fact]
+    public void Dispose_is_idempotent()
+    {
+        var service = NewService();
+        service.Dispose();
+
+        Assert.Null(Record.Exception(service.Dispose));
+    }
+
+    [Fact]
+    public void Round_trips_with_a_large_associated_data()
+    {
+        using var service = NewService();
+        var aad = RandomBytes(1_000_000, seed: 777);
+        var plaintext = new byte[] { 7, 8, 9 };
+
+        Assert.Equal(plaintext, service.Decrypt(service.Encrypt(plaintext, aad), aad));
+    }
+
     [Theory]
     [MemberData(nameof(PayloadSeeds))]
     public void Round_trips_random_payloads_with_random_associated_data(int seed)

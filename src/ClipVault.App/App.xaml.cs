@@ -47,6 +47,9 @@ public partial class App : Application, IDisposable
     {
         InitializeComponent();
 
+        // Custom High Contrast brushes already pair correctly, so suppress the platform's extra adjustment.
+        HighContrastAdjustment = ApplicationHighContrastAdjustment.None;
+
         // Last-chance exception sinks; log the type name only (never plaintext).
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
@@ -180,6 +183,10 @@ public partial class App : Application, IDisposable
         // Apply the UI language before any window (including the unlock gate) is created.
         ApplyUiLanguage(settings.Current.Language);
 
+        // Theme service is created before the host so the startup unlock windows are themed too.
+        var themeService = new ThemeService();
+        themeService.Initialize(settings.Current.Theme);
+
         // Resolve the disk-encryption unlock gate before building the host.
         var unlock = await TryUnlockAtStartupAsync(settings.Current);
 
@@ -194,7 +201,7 @@ public partial class App : Application, IDisposable
 
         // In Hello mode _resolvedKey.Dek is already populated before StartAsync (ResolvedKeyVault reads it lazily).
         _host = Host.CreateApplicationBuilder()
-            .ConfigureClipVault(DispatcherQueue, settings, validatedPassphrase, _resolvedKey)
+            .ConfigureClipVault(DispatcherQueue, settings, validatedPassphrase, _resolvedKey, themeService)
             .Build();
         Services = _host.Services;
 
@@ -204,6 +211,9 @@ public partial class App : Application, IDisposable
 
         var window = Services.GetRequiredService<MainWindow>();
         Window = window;
+
+        // Track the main window for live theme switching (also applies the current theme now).
+        themeService.Register(window);
 
         // Paste-back after the VM writes to the clipboard.
         window.ViewModel.PasteRequested += OnPasteRequested;
@@ -244,6 +254,7 @@ public partial class App : Application, IDisposable
         {
             // Hello: decrypt the DEK via the OS prompt and store it into the holder (retryable / exit).
             var helloPrompt = new HelloUnlockWindow(keyProtector, new WindowsHelloService());
+            ThemeService.ApplyTo(helloPrompt, settings.Theme);
             helloPrompt.Activate();
 
             var dek = await helloPrompt.ResultTask;
@@ -260,6 +271,7 @@ public partial class App : Application, IDisposable
         {
             // Passphrase: validate in a dedicated window, then hand the string to the provider.
             var prompt = new PassphrasePromptWindow(keyProtector);
+            ThemeService.ApplyTo(prompt, settings.Theme);
             prompt.Activate();
 
             var entered = await prompt.ResultTask;
@@ -315,6 +327,7 @@ public partial class App : Application, IDisposable
         {
             _settingsWindow = Services.GetRequiredService<SettingsWindow>();
             _settingsWindow.Closed += OnSettingsWindowClosed;
+            Services.GetRequiredService<IThemeService>().Register(_settingsWindow);
         }
 
         _settingsWindow.ShowAndActivate();

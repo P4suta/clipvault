@@ -46,6 +46,12 @@
   "Settings.Language.Hint": "変更は再起動で適用されます。",
   "Settings.Language.System": "システムに従う",
 
+  "Settings.Theme.Label": "テーマ",
+  "Settings.Theme.Hint": "ライト・ダーク・システム追従から選択します（即時適用）。",
+  "Settings.Theme.System": "システムに従う",
+  "Settings.Theme.Light": "ライト",
+  "Settings.Theme.Dark": "ダーク",
+
   "Settings.Storage.Header": "保存方式",
   "Settings.Storage.Encrypted": "暗号化ディスク（再起動後も保持）",
   "Settings.Storage.Volatile": "メモリ揮発（ディスクに一切残さない）",

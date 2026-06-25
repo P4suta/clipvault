@@ -8,25 +8,9 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
-                <!-- Other merged dictionaries here -->
+                <ResourceDictionary Source="ms-appx:///Styles/Tokens.xaml" />
+                <ResourceDictionary Source="ms-appx:///Styles/Styles.xaml" />
             </ResourceDictionary.MergedDictionaries>
-
-            <!-- 設定セクションのカード体裁（設定アプリ風のグループ枠）。 -->
-            <Style x:Key="SettingsSectionStyle" TargetType="Border">
-                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
-                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
-                <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="{StaticResource OverlayCornerRadius}" />
-                <Setter Property="Padding" Value="20" />
-            </Style>
-
-            <!-- 破壊的操作（パニックワイプ）用のカード体裁。 -->
-            <Style
-                x:Key="SettingsDangerSectionStyle"
-                BasedOn="{StaticResource SettingsSectionStyle}"
-                TargetType="Border">
-                <Setter Property="BorderBrush" Value="{ThemeResource SystemFillColorCriticalBrush}" />
-            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

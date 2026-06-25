@@ -13,6 +13,7 @@ app_tests := "tests/ClipVault.Application.Tests/ClipVault.Application.Tests.cspr
 infra_tests := "tests/ClipVault.Infrastructure.Tests/ClipVault.Infrastructure.Tests.csproj"
 app_ui_tests := "tests/ClipVault.App.Tests/ClipVault.App.Tests.csproj"
 coverage_dir := "artifacts/coverage"
+runsettings := "coverlet.runsettings"
 publish_dir := "artifacts/publish/win-x64"
 
 # List recipes.
@@ -228,10 +229,10 @@ audit:
 # Collect line/branch coverage (Cobertura via coverlet) for every test project into artifacts/coverage.
 coverage:
     -rm -rf {{coverage_dir}}
-    {{dotnet}} test {{domain_tests}} --collect:"XPlat Code Coverage" --results-directory {{coverage_dir}}
-    {{dotnet}} test {{app_tests}} --collect:"XPlat Code Coverage" --results-directory {{coverage_dir}}
-    {{dotnet}} test {{infra_tests}} --collect:"XPlat Code Coverage" --results-directory {{coverage_dir}}
-    {{dotnet}} test {{app_ui_tests}} --collect:"XPlat Code Coverage" --results-directory {{coverage_dir}}
+    {{dotnet}} test {{domain_tests}} --collect:"XPlat Code Coverage" --settings {{runsettings}} --results-directory {{coverage_dir}}
+    {{dotnet}} test {{app_tests}} --collect:"XPlat Code Coverage" --settings {{runsettings}} --results-directory {{coverage_dir}}
+    {{dotnet}} test {{infra_tests}} --collect:"XPlat Code Coverage" --settings {{runsettings}} --results-directory {{coverage_dir}}
+    {{dotnet}} test {{app_ui_tests}} --collect:"XPlat Code Coverage" --settings {{runsettings}} --results-directory {{coverage_dir}}
     @echo "Cobertura reports under {{coverage_dir}}/*/coverage.cobertura.xml"
 
 # Build an HTML coverage report (requires the pinned ReportGenerator local tool; opens artifacts/coverage/html).
@@ -239,6 +240,26 @@ coverage-html: coverage
     {{dotnet}} tool restore
     {{dotnet}} reportgenerator "-reports:{{coverage_dir}}/**/coverage.cobertura.xml" "-targetdir:{{coverage_dir}}/html" "-reporttypes:Html;TextSummary"
     @echo "Open {{coverage_dir}}/html/index.html"
+
+# Ratchet gate: fail if line/branch coverage drops below the floor (override via COVERAGE_MIN_LINE / COVERAGE_MIN_BRANCH).
+coverage-check: coverage
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{dotnet}} tool restore
+    {{dotnet}} reportgenerator "-reports:{{coverage_dir}}/**/coverage.cobertura.xml" "-targetdir:{{coverage_dir}}/summary" "-reporttypes:TextSummary" >/dev/null
+    summary="{{coverage_dir}}/summary/Summary.txt"
+    cat "$summary"
+    line=$(grep -i 'Line coverage' "$summary" | grep -oE '[0-9]+(\.[0-9]+)?' | head -1)
+    branch=$(grep -i 'Branch coverage' "$summary" | grep -oE '[0-9]+(\.[0-9]+)?' | head -1)
+    min_line=${COVERAGE_MIN_LINE:-80}
+    min_branch=${COVERAGE_MIN_BRANCH:-72}
+    awk -v l="$line" -v ml="$min_line" -v b="$branch" -v mb="$min_branch" 'BEGIN {
+      ok = 1
+      if (l+0 < ml+0) { printf "FAIL: line coverage %s%% < %s%%\n", l, ml; ok = 0 }
+      if (b+0 < mb+0) { printf "FAIL: branch coverage %s%% < %s%%\n", b, mb; ok = 0 }
+      if (ok) { printf "OK: line %s%% (>= %s%%), branch %s%% (>= %s%%)\n", l, ml, b, mb }
+      exit (ok ? 0 : 1)
+    }'
 
 # ---------------------------------------------------------------------------
 # Publish, sign, SBOM
@@ -296,8 +317,8 @@ pre-commit: fmt-check analyze typos strict-code
 
 # Coverage is collected separately (`just coverage`); ClipVault does not gate on a coverage floor.
 
-# CI gate end-to-end: locked restore, then all static lints, tests, and the dependency audit.
-ci: restore-locked lint test audit
+# CI gate end-to-end: locked restore, then all static lints, tests with the coverage gate, and the dependency audit.
+ci: restore-locked lint coverage-check audit
 
 # ---------------------------------------------------------------------------
 # Misc

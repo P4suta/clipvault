@@ -8,6 +8,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media.Animation;
 
 namespace ClipVaultApp;
 
@@ -216,6 +217,24 @@ public sealed partial class MainWindow : Window
             ViewModel.PasteCommand.Execute(item);
         }
     }
+
+    /// <summary>Prepares a connected animation from the entry thumbnail before the detail view opens (images only).</summary>
+    /// <param name="sender">The view button whose data context is the entry.</param>
+    /// <param name="e">The event data.</param>
+    private void OnViewDetailClick(object sender, RoutedEventArgs e)
+    {
+        // Text entries have no detail thumbnail, so the connected animation applies to images only.
+        if (sender is FrameworkElement { DataContext: EntryViewModel { IsImage: true } item })
+        {
+            HistoryList.PrepareConnectedAnimation("entryForward", item, "EntryThumb");
+        }
+    }
+
+    /// <summary>Starts the prepared connected animation once the detail image is laid out (no-op if none was prepared).</summary>
+    /// <param name="sender">The detail image.</param>
+    /// <param name="e">The event data.</param>
+    private void OnDetailImageOpened(object sender, RoutedEventArgs e) =>
+        ConnectedAnimationService.GetForCurrentView().GetAnimation("entryForward")?.TryStart(DetailThumb);
 
     /// <summary>Lazily decodes the thumbnail when each row is loaded (via the VM).</summary>
     /// <param name="sender">The event source.</param>

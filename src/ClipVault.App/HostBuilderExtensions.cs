@@ -33,13 +33,15 @@ internal static class HostBuilderExtensions
     /// <param name="settings">The loaded settings service that drives the storage and retention configuration.</param>
     /// <param name="validatedPassphrase">The passphrase validated at the startup gate, or null when none is used.</param>
     /// <param name="resolvedKey">The holder for the DEK resolved at the startup gate, shared with the key vault.</param>
+    /// <param name="themeService">The theme service to register so view models can switch the theme live.</param>
     /// <returns>The same <see cref="HostApplicationBuilder"/> instance so calls can be chained.</returns>
     public static HostApplicationBuilder ConfigureClipVault(
         this HostApplicationBuilder builder,
         Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue,
         JsonSettingsService settings,
         string? validatedPassphrase,
-        IResolvedMasterKey resolvedKey)
+        IResolvedMasterKey resolvedKey,
+        IThemeService themeService)
     {
         // Privacy / no footprint: route logs only to the debugger output (OutputDebugString) — never the
         // console, Event Log, or a file. Clear the providers Host.CreateApplicationBuilder adds by default.
@@ -59,6 +61,9 @@ internal static class HostBuilderExtensions
 
         // DEK resolved at the startup gate (consumed by ResolvedKeyVault in Hello disk mode); same instance the gate populated.
         builder.Services.AddSingleton(resolvedKey);
+
+        // Theme service (same instance that themed the startup windows), shared with the settings view model.
+        builder.Services.AddSingleton<IThemeService>(themeService);
 
         // Replace the default in-memory settings service with the persisted JSON implementation (the already-loaded instance).
         builder.Services.Replace(ServiceDescriptor.Singleton<ISettingsService>(settings));

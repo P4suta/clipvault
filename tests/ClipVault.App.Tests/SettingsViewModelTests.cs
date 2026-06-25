@@ -1,6 +1,7 @@
 using ClipVault.Application.Abstractions;
 using ClipVault.Application.Settings;
 using ClipVaultApp.Localization;
+using ClipVaultApp.Services;
 using ClipVaultApp.ViewModels;
 using NSubstitute;
 
@@ -239,6 +240,36 @@ public class SettingsViewModelTests
         Assert.Equal(AppLanguage.ChineseSimplified, settings.Current.Language);
     }
 
+    // ---------- Theme ----------
+    [Fact]
+    public void Loads_selected_theme_from_settings()
+    {
+        var settings = new InMemorySettingsService();
+        settings.Update(ClipVaultSettings.Default with { Theme = AppTheme.Dark });
+
+        var vm = Build(settings);
+
+        Assert.NotNull(vm.SelectedTheme);
+        Assert.Equal(AppTheme.Dark, vm.SelectedTheme!.Value);
+    }
+
+    [Fact]
+    public void Defaults_to_system_theme_when_unset() =>
+        Assert.Equal(AppTheme.System, Build(new InMemorySettingsService()).SelectedTheme!.Value);
+
+    [Fact]
+    public void Selecting_a_theme_persists_and_applies_it()
+    {
+        var settings = new InMemorySettingsService();
+        var themeService = Substitute.For<IThemeService>();
+        var vm = Build(settings, themeService: themeService);
+
+        vm.SelectedTheme = vm.ThemeOptions.First(o => o.Value == AppTheme.Dark);
+
+        Assert.Equal(AppTheme.Dark, settings.Current.Theme);
+        themeService.Received(1).Apply(AppTheme.Dark);
+    }
+
     // ---------- Retention ----------
     [Fact]
     public void Retention_age_is_clamped_to_at_least_one()
@@ -273,12 +304,16 @@ public class SettingsViewModelTests
     }
 
     private static SettingsViewModel Build(
-        ISettingsService settings, IVaultManagement? vault = null, IStartupService? startup = null) =>
+        ISettingsService settings,
+        IVaultManagement? vault = null,
+        IStartupService? startup = null,
+        IThemeService? themeService = null) =>
         new(
             settings,
             vault ?? Substitute.For<IVaultManagement>(),
             startup ?? Substitute.For<IStartupService>(),
-            new LocalizationService(AppLanguage.Japanese));
+            new LocalizationService(AppLanguage.Japanese),
+            themeService ?? Substitute.For<IThemeService>());
 
     private static InMemorySettingsService DiskSettings()
     {

@@ -13,6 +13,11 @@
     <PackageVersion Include="Microsoft.Windows.CsWin32" Version="0.3.298" />
   </ItemGroup>
 
+  <ItemGroup Label="UI controls (Windows Community Toolkit)">
+    <!-- SettingsCard / SettingsExpander: Windows 11-style settings rows (Fluent Design). -->
+    <PackageVersion Include="CommunityToolkit.WinUI.Controls.SettingsControls" Version="8.2.251219" />
+  </ItemGroup>
+
   <ItemGroup Label="MVVM / DI / Hosting">
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.9" />

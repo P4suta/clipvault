@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using ClipVault.Application.Abstractions;
 using ClipVaultApp.Localization;
+using ClipVaultApp.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -24,6 +25,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly IVaultManagement _vault;
     private readonly IStartupService _startup;
     private readonly ILocalizationService _loc;
+    private readonly IThemeService _themeService;
 
     /// <summary>Guard to prevent a feedback loop between UI changes and service reflection.</summary>
     private bool _isSyncing;
@@ -35,16 +37,19 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// <param name="vault">The vault management service for protection operations.</param>
     /// <param name="startup">The startup service controlling auto-start.</param>
     /// <param name="loc">The localization service used for display and message strings.</param>
+    /// <param name="themeService">The theme service used to apply the selected theme live.</param>
     public SettingsViewModel(
         ISettingsService settings,
         IVaultManagement vault,
         IStartupService startup,
-        ILocalizationService loc)
+        ILocalizationService loc,
+        IThemeService themeService)
     {
         _settings = settings;
         _vault = vault;
         _startup = startup;
         _loc = loc;
+        _themeService = themeService;
 
         // Language picker: endonyms for concrete languages, plus a localized label for the OS-following default.
         LanguageOptions =
@@ -53,6 +58,14 @@ public sealed partial class SettingsViewModel : ObservableObject
             new LanguageOption(AppLanguage.Japanese, "日本語"),
             new LanguageOption(AppLanguage.English, "English"),
             new LanguageOption(AppLanguage.ChineseSimplified, "简体中文"),
+        ];
+
+        // Theme picker (applied immediately, unlike language).
+        ThemeOptions =
+        [
+            new ThemeOption(AppTheme.System, _loc.GetString("Settings.Theme.System")),
+            new ThemeOption(AppTheme.Light, _loc.GetString("Settings.Theme.Light")),
+            new ThemeOption(AppTheme.Dark, _loc.GetString("Settings.Theme.Dark")),
         ];
 
         LoadFromBackend();
@@ -84,6 +97,15 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// <summary>Gets or sets the selected UI language. The change is persisted and applied on the next restart.</summary>
     [ObservableProperty]
     public partial LanguageOption? SelectedLanguage { get; set; }
+
+    // --- Theme ---
+
+    /// <summary>Gets the selectable UI themes (fixed list).</summary>
+    public IReadOnlyList<ThemeOption> ThemeOptions { get; }
+
+    /// <summary>Gets or sets the selected UI theme. The change is persisted and applied immediately.</summary>
+    [ObservableProperty]
+    public partial ThemeOption? SelectedTheme { get; set; }
 
     // --- Passphrase protection ---
 
@@ -280,6 +302,9 @@ public sealed partial class SettingsViewModel : ObservableObject
             SelectedLanguage = LanguageOptions.FirstOrDefault(o => o.Value == current.Language)
                 ?? LanguageOptions[0];
 
+            SelectedTheme = ThemeOptions.FirstOrDefault(o => o.Value == current.Theme)
+                ?? ThemeOptions[0];
+
             MaskGenericPasswords = current.MaskGenericPasswords;
             StripTrackingParameters = current.StripTrackingParameters;
             MaxAgeDays = current.MaxAgeDays;
@@ -410,6 +435,19 @@ public sealed partial class SettingsViewModel : ObservableObject
 
         // Persist only; the new language is applied on the next restart (like the other restart-applied settings).
         _settings.Update(_settings.Current with { Language = value.Value });
+    }
+
+    // --- Theme two-way sync ---
+    partial void OnSelectedThemeChanged(ThemeOption? value)
+    {
+        if (_isSyncing || value is null || _settings.Current.Theme == value.Value)
+        {
+            return;
+        }
+
+        // Persist and apply immediately (theme changes do not require a restart).
+        _settings.Update(_settings.Current with { Theme = value.Value });
+        _themeService.Apply(value.Value);
     }
 
     /// <summary>Sets or changes the passphrase.</summary>

@@ -132,6 +132,33 @@ public sealed class VaultManagementTests : IDisposable
         Assert.Equal(0, await repo.CountAsync());
     }
 
+    [Fact]
+    public async Task Panic_wipe_destroys_a_passphrase_protected_key()
+    {
+        var keyPath = Path.Combine(_dir, "dek.bin");
+        new KeyProtector(keyPath, new Argon2Parameters(MemoryKiB: 256, Iterations: 1, Parallelism: 1)).CreateNew("pw");
+        var vault = DiskVault(keyPath);
+        Assert.Equal(VaultProtection.Passphrase, vault.Protection);
+
+        await vault.PanicWipeAsync();
+
+        Assert.False(File.Exists(keyPath));
+    }
+
+    [Fact]
+    public async Task Panic_wipe_destroys_a_hello_protected_key()
+    {
+        var keyPath = Path.Combine(_dir, "dek.bin");
+        new KeyProtector(keyPath).CreateNew(passphrase: null);
+        var vault = DiskVault(keyPath);
+        await vault.EnableHelloAsync();
+        Assert.Equal(VaultProtection.Hello, vault.Protection);
+
+        await vault.PanicWipeAsync();
+
+        Assert.False(File.Exists(keyPath));
+    }
+
     private static VaultManagement VolatileVault() =>
         new(
             new ClipVaultStorageOptions { Storage = StorageMode.VolatileMemory, DatabasePath = ":memory:", KeyFilePath = "unused" },

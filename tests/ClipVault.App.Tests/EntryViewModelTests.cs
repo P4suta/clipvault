@@ -32,6 +32,45 @@ public class EntryViewModelTests
         Assert.Equal("hello world", vm.Preview);
     }
 
+    [Theory]
+    [InlineData(ContentKind.Url, true)]
+    [InlineData(ContentKind.Email, true)]
+    [InlineData(ContentKind.Json, true)]
+    [InlineData(ContentKind.Color, true)]
+    [InlineData(ContentKind.Number, true)]
+    [InlineData(ContentKind.Text, false)]
+    [InlineData(ContentKind.Image, false)]
+    public void Has_badge_only_for_specific_kinds(ContentKind kind, bool expected) =>
+        Assert.Equal(expected, new EntryViewModel(TextEntry("x"), kind, "L").HasBadge);
+
+    [Fact]
+    public async Task Ensure_thumbnail_is_a_no_op_for_text_entries()
+    {
+        var vm = new EntryViewModel(TextEntry("x"), ContentKind.Text, "L");
+
+        await vm.EnsureThumbnailAsync();
+
+        Assert.Null(vm.Thumbnail);
+    }
+
+    [Fact]
+    public async Task Ensure_thumbnail_is_a_no_op_when_the_thumbnail_is_empty()
+    {
+        var entry = ClipboardEntry.Create(
+            ClipContentType.Image,
+            new ContentHash("e"),
+            "img",
+            new ImagePreview([], 1, 1),
+            sizeInBytes: 1,
+            new SourceApplication("paint", null, null),
+            capturedAt: DateTimeOffset.UnixEpoch);
+        var vm = new EntryViewModel(entry, ContentKind.Image, "L");
+
+        await vm.EnsureThumbnailAsync();
+
+        Assert.Null(vm.Thumbnail);
+    }
+
     private static ClipboardEntry ImageEntry(int width, int height, string preview) =>
         ClipboardEntry.Create(
             ClipContentType.Image,
