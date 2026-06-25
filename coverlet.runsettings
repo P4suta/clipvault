@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Coverage collection settings. Excludes code that cannot be exercised by unit tests
+  (WinUI windows / XAML code-behind, Win32 + WinRT interop, hosted services) so the
+  reported percentage reflects the logic that is genuinely testable.
+-->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <ExcludeByAttribute>GeneratedCodeAttribute,CompilerGeneratedAttribute,ExcludeFromCodeCoverageAttribute</ExcludeByAttribute>
+          <Exclude>[ClipVault.App]WinRT.*,[ClipVault.App]ClipVaultApp.App,[ClipVault.App]ClipVaultApp.MainWindow,[ClipVault.App]ClipVaultApp.SettingsWindow,[ClipVault.App]ClipVaultApp.HelloUnlockWindow,[ClipVault.App]ClipVaultApp.PassphrasePromptWindow,[ClipVault.App]ClipVaultApp.HostBuilderExtensions,[ClipVault.App]ClipVaultApp.Platform.*,[ClipVault.App]ClipVaultApp.Services.UiDispatcher,[ClipVault.App]ClipVaultApp.Services.ThemeService,[ClipVault.App]ClipVaultApp.Localization.StrExtension,[ClipVault.Infrastructure]ClipVault.Infrastructure.Clipboard.*,[ClipVault.Infrastructure]ClipVault.Infrastructure.Hosting.*,[ClipVault.Infrastructure]ClipVault.Infrastructure.Startup.*,[ClipVault.Infrastructure]ClipVault.Infrastructure.Security.WindowsHelloService</Exclude>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

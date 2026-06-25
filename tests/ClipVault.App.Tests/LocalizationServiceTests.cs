@@ -18,6 +18,9 @@ public sealed class LocalizationServiceTests
     [InlineData("zh-TW", AppLanguage.English)]
     [InlineData("zh-HK", AppLanguage.English)]
     [InlineData("fr-FR", AppLanguage.English)]
+    [InlineData("zh", AppLanguage.ChineseSimplified)]
+    [InlineData("zh-MO", AppLanguage.English)]
+    [InlineData("zh-Hans-CN", AppLanguage.ChineseSimplified)]
     public void FromCulture_maps_to_a_supported_language(string cultureName, AppLanguage expected) => Assert.Equal(expected, LocalizationService.FromCulture(CultureInfo.GetCultureInfo(cultureName)));
 
     [Fact]
@@ -82,4 +85,8 @@ public sealed class LocalizationServiceTests
             en.Keys.OrderBy(k => k, StringComparer.Ordinal),
             zh.Keys.OrderBy(k => k, StringComparer.Ordinal));
     }
+
+    [Fact]
+    public void Language_tables_load_empty_for_an_unknown_tag() =>
+        Assert.Empty(LanguageTables.Load("klingon"));
 }

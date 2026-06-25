@@ -83,4 +83,37 @@ public sealed class JsonSettingsServiceTests : IDisposable
         Assert.Equal(AppLanguage.System, reloaded.Language);
         Assert.Equal(StorageMode.EncryptedDisk, reloaded.Storage);
     }
+
+    [Fact]
+    public void Theme_round_trips()
+    {
+        var service = JsonSettingsService.Load(_path);
+        service.Update(ClipVaultSettings.Default with { Theme = AppTheme.Dark });
+
+        Assert.Equal(AppTheme.Dark, JsonSettingsService.Load(_path).Current.Theme);
+    }
+
+    [Fact]
+    public void Unknown_theme_falls_back_to_system()
+    {
+        File.WriteAllText(_path, "{\"Theme\":\"plaid\"}");
+
+        Assert.Equal(AppTheme.System, JsonSettingsService.Load(_path).Current.Theme);
+    }
+
+    [Fact]
+    public void Truncated_json_falls_back_to_defaults()
+    {
+        File.WriteAllText(_path, "{\"Storage\":");
+
+        Assert.Equal(StorageMode.VolatileMemory, JsonSettingsService.Load(_path).Current.Storage);
+    }
+
+    [Fact]
+    public void A_wrong_typed_field_falls_back_to_defaults()
+    {
+        File.WriteAllText(_path, "{\"MaxAgeDays\":\"seven\"}");
+
+        Assert.Equal(30, JsonSettingsService.Load(_path).Current.MaxAgeDays);
+    }
 }

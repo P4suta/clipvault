@@ -79,8 +79,8 @@ jobs:
       - name: Strict-code gate
         run: mise exec -- just strict-code
 
-      - name: Test
-        run: mise exec -- just test
+      - name: Test and coverage gate
+        run: mise exec -- just coverage-check
 
       - name: Dependency vulnerability audit
         run: mise exec -- just audit

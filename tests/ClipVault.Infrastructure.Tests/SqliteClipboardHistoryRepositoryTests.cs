@@ -205,6 +205,41 @@ public class SqliteClipboardHistoryRepositoryTests
         }
     }
 
+    [Fact]
+    public async Task Materialize_returns_null_for_a_missing_id()
+    {
+        using var repo = NewRepo();
+
+        Assert.Null(await repo.MaterializeAsync(EntryId.New()));
+    }
+
+    [Fact]
+    public async Task Clear_on_an_empty_repository_is_a_no_op()
+    {
+        using var repo = NewRepo();
+
+        await repo.ClearAsync();
+        await repo.ClearAsync();
+
+        Assert.Equal(0, await repo.CountAsync());
+    }
+
+    [Fact]
+    public async Task Re_adding_the_same_hash_after_remove_succeeds()
+    {
+        using var repo = NewRepo();
+        var first = TextEntry("dup", "one", T0);
+        await repo.AddAsync(first, Text("one"));
+        await repo.RemoveAsync(first.Id);
+
+        var second = TextEntry("dup", "two", T0.AddMinutes(1));
+        await repo.AddAsync(second, Text("two"));
+
+        var found = await repo.FindByHashAsync(new ContentHash("dup"));
+        Assert.Equal(second.Id, found!.Id);
+        Assert.Equal("two", found.Preview);
+    }
+
     private static SqliteClipboardHistoryRepository NewRepo() =>
         new(
             new ClipVaultStorageOptions { DatabasePath = ":memory:", KeyFilePath = "unused" },
