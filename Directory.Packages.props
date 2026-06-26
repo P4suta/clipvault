@@ -49,6 +49,13 @@
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
   </ItemGroup>
 
+  <ItemGroup Label="Fuzzing (ClipVault.Fuzz; off-solution, Linux/ClusterFuzzLite only)">
+    <!-- SharpFuzz library referenced by the libFuzzer harness. The matching SharpFuzz.CommandLine
+         instrumentation tool is pinned in .clusterfuzzlite/Dockerfile. Unreferenced by any in-solution
+         project, so it does not enter the committed lockfiles. -->
+    <PackageVersion Include="SharpFuzz" Version="2.3.0" />
+  </ItemGroup>
+
   <ItemGroup Label="Analyzers (build-time only, PrivateAssets=all)">
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
     <PackageVersion Include="Meziantou.Analyzer" Version="3.0.107" />

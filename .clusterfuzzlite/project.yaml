@@ -1,0 +1,8 @@
+# ClusterFuzzLite project config for ClipVault's C#/.NET fuzz target.
+# The harness is C# (SharpFuzz), but the fuzz target binary is a C++-linked libfuzzer-dotnet
+# launcher, so the build uses the generic c++ toolchain rather than unsupported `csharp` infra.
+language: c++
+fuzzing_engines:
+  - libfuzzer
+sanitizers:
+  - address

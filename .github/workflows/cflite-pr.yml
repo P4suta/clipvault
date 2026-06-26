@@ -1,0 +1,37 @@
+# ClusterFuzzLite: fuzz the code changed in a pull request, using the SharpFuzz harness over
+# ClipVault.Application's parsing surface. C#/.NET is wired via a custom builder — see .clusterfuzzlite/.
+name: cflite-pr
+
+on:
+  pull_request:
+    branches: [main]
+
+# Deny by default at the workflow scope; the one job grants only what it needs.
+permissions: {}
+
+concurrency:
+  group: cflite-pr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fuzzing:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # build_fuzzers checks out the PR code
+      security-events: write # run_fuzzers uploads crash findings as SARIF to the Security tab
+    steps:
+      - name: Build fuzzers
+        uses: google/clusterfuzzlite/actions/build_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          language: c++
+          sanitizer: address
+          bad-build-check: true # fail fast if the produced target does not actually run
+
+      - name: Run fuzzers
+        uses: google/clusterfuzzlite/actions/run_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          fuzz-seconds: 300
+          mode: code-change
+          sanitizer: address
+          output-sarif: true

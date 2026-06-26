@@ -1,0 +1,33 @@
+# ClusterFuzzLite: scheduled batch fuzzing that grows the saved corpus and re-checks it over a longer
+# budget than the per-PR run. Crashes surface as SARIF in the Security tab. See .clusterfuzzlite/.
+name: cflite-cron
+
+on:
+  schedule:
+    - cron: "23 4 * * 3" # weekly, Wednesday 04:23 UTC
+  workflow_dispatch:
+
+# Deny by default at the workflow scope; the one job grants only what it needs.
+permissions: {}
+
+jobs:
+  batch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # run_fuzzers uploads crash findings as SARIF to the Security tab
+    steps:
+      - name: Build fuzzers
+        uses: google/clusterfuzzlite/actions/build_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          language: c++
+          sanitizer: address
+
+      - name: Run fuzzers
+        uses: google/clusterfuzzlite/actions/run_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          fuzz-seconds: 1800
+          mode: batch
+          sanitizer: address
+          output-sarif: true

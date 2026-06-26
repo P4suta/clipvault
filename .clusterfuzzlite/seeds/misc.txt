@@ -1,0 +1,5 @@
+#ff8800
+rgba(12, 34, 56, 0.5)
+user@example.com
+1,234,567.89
+Tr0ub4dor&3xample

@@ -1,0 +1,8 @@
+# Keep the ClusterFuzzLite build context lean and reproducible: ship only sources, not build outputs,
+# VCS metadata, or local fuzzing output. The container restores/builds everything it needs fresh.
+.git
+artifacts/
+out/
+**/bin/
+**/obj/
+*.user

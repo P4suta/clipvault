@@ -1,5 +1,9 @@
 # Configuration for `typos` (https://github.com/crate-ci/typos).
 # typos honors .gitignore, so build outputs under artifacts/ are already skipped.
+[files]
+# Fuzzing seed corpus: deliberate non-words / dummy tokens, not prose to spell-check.
+extend-exclude = [".clusterfuzzlite/seeds/"]
+
 [default.extend-words]
 # Intentional minimal-difference test data (e.g. KeyedHash("abc") != KeyedHash("abd")).
 abd = "abd"
