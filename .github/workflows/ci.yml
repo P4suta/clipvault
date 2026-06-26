@@ -25,13 +25,13 @@ jobs:
     permissions:
       contents: read # only needs to read the repository
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0 # full history so `committed` can lint the PR commit range
           persist-credentials: false # no pushes; do not leave the token in .git/config
 
       # Installs the pinned toolchain from mise.toml (dotnet, just, typos, actionlint, committed) and activates it.
-      - uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
+      - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
           install: true
           cache: true
