@@ -76,5 +76,13 @@ workflow identity). See [docs/VERIFICATION.md](docs/VERIFICATION.md) for step-by
   dependencies and SHA-pinned GitHub Actions current.
 - Release artifacts get SLSA build-provenance and SBOM attestations bound to the binary's digest; the release
   workflow verifies its own attestations before publishing.
+- The release runs as three least-privilege jobs — `build` (no secrets, read-only), `sign`, and `publish` — so
+  the signing credentials touch the smallest possible surface. The SSL.com eSigner (`ES_*`) secrets are scoped
+  to the approval-gated `release` GitHub Environment and resolve only in the `sign` job; required reviewers must
+  approve before any signing or publishing runs. After signing, the workflow hard-verifies the Authenticode
+  signature (full chain + RFC3161 timestamp, expected signer subject) so a swapped or untimestamped cert fails
+  the release. Provenance/SBOM attestations stay keyless (OIDC/Sigstore, no stored secrets).
+- The release can be dry-run via `workflow_dispatch` with `publish=false`: it builds, signs, and verifies
+  without creating a Release or attestations (safe under immutable releases).
 - Releases are cut from `v*.*.*` tags; `main` is protected and requires CI + CodeQL to pass. Signed tags and
   branch protection gate who can trigger a release (the `--signer-workflow` check anchors trust to this workflow).
