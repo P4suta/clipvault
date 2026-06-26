@@ -101,4 +101,20 @@
     <!-- WinUI は XAML 型をリフレクションで解決するためトリミングは無効化（実行時の型欠落を防ぐ）。 -->
     <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
+
+  <!--
+    Unpackaged WinUI の dotnet publish はアプリ自身の PRI（$(TargetName).pri）を出力にコピーしない既知の不具合がある。
+    これが欠けると ms-appx:/// の XAML リソース（Styles/Tokens.xaml 等）を実行時に解決できず、ウィンドウ生成時に
+    XamlParseException で無言終了する。ビルド出力の PRI を publish の対象ファイルへ明示的に追加して回避する。
+  -->
+  <Target Name="IncludeAppPriInPublish"
+          BeforeTargets="ComputeFilesToPublish"
+          Condition="Exists('$(TargetDir)$(TargetName).pri')">
+    <ItemGroup>
+      <ResolvedFileToPublish Include="$(TargetDir)$(TargetName).pri">
+        <RelativePath>$(TargetName).pri</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
 </Project>
