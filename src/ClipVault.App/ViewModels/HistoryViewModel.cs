@@ -6,6 +6,8 @@ using ClipVault.Application.Clipboard;
 using ClipVault.Application.History;
 using ClipVault.Application.Insights;
 using ClipVault.Application.Messages;
+using ClipVault.Domain.Abstractions;
+using ClipVault.Domain.Entities;
 using ClipVault.Domain.ValueObjects;
 using ClipVaultApp.Localization;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -27,6 +29,9 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
     /// <summary>Maximum number of characters shown in the full-content view (the full payload is still copied).</summary>
     private const int MaxDetailTextLength = 1_000_000;
 
+    /// <summary>Number of entries fetched per page as the list scrolls.</summary>
+    private const int PageSize = 50;
+
     private static readonly TimeSpan SearchDebounce = TimeSpan.FromMilliseconds(150);
 
     private readonly HistoryQueryService _queryService;
@@ -45,8 +50,8 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
     /// <summary>Used for search debounce; cancels the previous wait when typing continuously.</summary>
     private CancellationTokenSource? _searchDebounceCts;
 
-    /// <summary>Flag to avoid redundant concurrent reloads.</summary>
-    private bool _isLoading;
+    /// <summary>Cancels the in-flight rebuild when a newer one supersedes it.</summary>
+    private CancellationTokenSource? _rebuildCts;
 
     /// <summary>Suppresses the reload triggered by filter-selection changes made while rebuilding the option lists.</summary>
     private bool _suppressFilterReload;
@@ -99,8 +104,9 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
     /// </summary>
     public event EventHandler? PasteRequested;
 
-    /// <summary>Gets the collection of entries shown in the list.</summary>
-    public ObservableCollection<EntryViewModel> Entries { get; } = [];
+    /// <summary>Gets the incrementally-loaded collection of entries shown in the list (null until the first load).</summary>
+    [ObservableProperty]
+    public partial IncrementalHistoryCollection? Entries { get; private set; }
 
     /// <summary>Gets or sets the current search text.</summary>
     [ObservableProperty]
@@ -166,16 +172,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
     /// onto the UI thread before reloading.
     /// </summary>
     /// <param name="message">The history-changed message.</param>
-    public void Receive(HistoryChangedMessage message) => _uiDispatcher.Post(() => _ = ReloadAsync());
-
-    /// <summary>
-    /// Decodes the thumbnail for an item when its row becomes visible. Only items present in the
-    /// list are targeted (to avoid wasteful decoding of items removed by filtering or deletion).
-    /// </summary>
-    /// <param name="entry">The entry whose thumbnail should be ensured.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    public Task EnsureThumbnailForAsync(EntryViewModel entry) =>
-        entry is not null && Entries.Contains(entry) ? entry.EnsureThumbnailAsync() : Task.CompletedTask;
+    public void Receive(HistoryChangedMessage message) => _uiDispatcher.Post(() => _ = RebuildAsync(recomputeFacets: true));
 
     /// <inheritdoc/>
     public void Dispose()
@@ -184,6 +181,9 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
         _messenger.UnregisterAll(this);
         _searchDebounceCts?.Cancel();
         _searchDebounceCts?.Dispose();
+        _rebuildCts?.Cancel();
+        _rebuildCts?.Dispose();
+        Entries?.Dispose();
 
         // Zero any plaintext still held by an open detail view.
         _detailContent?.Dispose();
@@ -192,7 +192,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
 
     /// <summary>Initial load. Call once when the window is shown.</summary>
     [RelayCommand]
-    private async Task LoadAsync() => await ReloadAsync();
+    private async Task LoadAsync() => await RebuildAsync(recomputeFacets: true);
 
     /// <summary>Writes the selected entry back to the clipboard (Enter / double-click / default action).</summary>
     [RelayCommand]
@@ -389,7 +389,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
         var cts = new CancellationTokenSource();
         _searchDebounceCts = cts;
 
-        _ = DebounceReloadAsync(cts.Token);
+        _ = DebounceRebuildAsync(cts.Token);
     }
 
     /// <summary>Reloads when the content-kind filter changes, unless the change came from rebuilding the option lists.</summary>
@@ -398,7 +398,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
     {
         if (!_suppressFilterReload)
         {
-            _ = ReloadAsync();
+            _ = RebuildAsync(recomputeFacets: false);
         }
     }
 
@@ -408,7 +408,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
     {
         if (!_suppressFilterReload)
         {
-            _ = ReloadAsync();
+            _ = RebuildAsync(recomputeFacets: false);
         }
     }
 
@@ -445,12 +445,12 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
         }
     }
 
-    private async Task DebounceReloadAsync(CancellationToken cancellationToken)
+    private async Task DebounceRebuildAsync(CancellationToken cancellationToken)
     {
         try
         {
             await Task.Delay(SearchDebounce, cancellationToken);
-            await ReloadAsync(cancellationToken);
+            await RebuildAsync(recomputeFacets: false);
         }
         catch (OperationCanceledException)
         {
@@ -458,42 +458,67 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
         }
     }
 
-    private async Task ReloadAsync(CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Rebuilds the list with the current search/filter by swapping in a fresh incrementally-loaded collection and
+    /// priming its first page. Facets are recomputed only on structural reloads (initial load, history changed),
+    /// not on filter changes. A newer rebuild cancels any in-flight one.
+    /// </summary>
+    /// <param name="recomputeFacets">Whether to recompute the kind/app filter facets (history changed).</param>
+    /// <returns>A task that completes once the first page has loaded.</returns>
+    private async Task RebuildAsync(bool recomputeFacets)
     {
-        if (_isLoading)
+        if (_rebuildCts is not null)
         {
-            return;
+            await _rebuildCts.CancelAsync();
+            _rebuildCts.Dispose();
         }
 
-        _isLoading = true;
+        var cts = new CancellationTokenSource();
+        _rebuildCts = cts;
+        var cancellationToken = cts.Token;
+
+        IncrementalHistoryCollection? next = null;
         try
         {
-            var facets = await _queryService.GetFacetsAsync(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            SyncFilterOptions(facets);
-
-            var search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText;
-            var entries = await _queryService.QueryAsync(
-                search,
-                kindFilter: SelectedKindFilter?.Kind,
-                sourceApp: SelectedAppFilter?.App,
-                cancellationToken: cancellationToken);
-
-            cancellationToken.ThrowIfCancellationRequested();
-
-            Entries.Clear();
-            foreach (var entry in entries)
+            if (recomputeFacets)
             {
-                var kind = ContentInsightService.Classify(entry);
-                Entries.Add(new EntryViewModel(entry, kind, KindLabelFor(kind)));
+                SyncFilterOptions(await _queryService.GetFacetsAsync(cancellationToken));
+                cancellationToken.ThrowIfCancellationRequested();
             }
 
-            IsEmpty = Entries.Count == 0;
+            var filter = new HistoryFilter(
+                string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim(),
+                Kind: SelectedKindFilter?.Kind,
+                SourceApp: SelectedAppFilter?.App);
+
+            next = new IncrementalHistoryCollection(
+                PageSize,
+                (cursor, size, token) => _queryService.QueryPageAsync(filter, cursor, size, token),
+                Project,
+                _uiDispatcher);
+
+            await next.LoadFirstPageAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var previous = Entries;
+            Entries = next;
+            previous?.Dispose();
+            IsEmpty = next.Count == 0 && !next.HasMoreItems;
         }
-        finally
+        catch (OperationCanceledException)
         {
-            _isLoading = false;
+            // Superseded by a newer rebuild; discard the half-built collection.
+            next?.Dispose();
         }
+    }
+
+    /// <summary>Projects a domain entry into its row view-model, wired to fetch its thumbnail on demand.</summary>
+    /// <param name="entry">The entry to wrap.</param>
+    /// <returns>The row view-model.</returns>
+    private EntryViewModel Project(ClipboardEntry entry)
+    {
+        var kind = ContentInsightService.Classify(entry);
+        return new EntryViewModel(entry, kind, KindLabelFor(kind), _queryService.GetThumbnailAsync);
     }
 
     /// <summary>

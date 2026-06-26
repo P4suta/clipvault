@@ -37,8 +37,11 @@ public sealed record ClipVaultSettings
     /// <summary>Gets the maximum number of days to retain entries (unpinned entries older than this are removed). Changes take effect after a restart.</summary>
     public int MaxAgeDays { get; init; } = 30;
 
-    /// <summary>Gets the maximum number of entries to retain. Changes take effect after a restart.</summary>
-    public int MaxEntries { get; init; } = 500;
+    /// <summary>Gets the maximum number of entries to retain (a non-positive value means no count limit). Changes take effect after a restart.</summary>
+    public int MaxEntries { get; init; } = 100_000;
+
+    /// <summary>Gets the maximum total size in bytes for retained history in encrypted-disk mode; the oldest unpinned entries are removed once exceeded. This is the primary bound on a large persisted history. Changes take effect after a restart.</summary>
+    public long MaxHistoryBytes { get; init; } = 2L * 1024 * 1024 * 1024;
 
     /// <summary>Gets a value indicating whether the application starts automatically when the user logs on to Windows.</summary>
     public bool RunAtStartup { get; init; }

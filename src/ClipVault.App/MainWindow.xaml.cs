@@ -236,15 +236,19 @@ public sealed partial class MainWindow : Window
     private void OnDetailImageOpened(object sender, RoutedEventArgs e) =>
         ConnectedAnimationService.GetForCurrentView().GetAnimation("entryForward")?.TryStart(DetailThumb);
 
-    /// <summary>Lazily decodes the thumbnail when each row is loaded (via the VM).</summary>
+    /// <summary>Lazily decodes the thumbnail when each row is loaded (the row's view-model fetches it on demand).</summary>
     /// <param name="sender">The event source.</param>
     /// <param name="e">The event data.</param>
+    [SuppressMessage(
+        "Minor Code Smell",
+        "S2325:Methods and properties that don't access instance data should be made static",
+        Justification = "XAML-wired Loaded event handler; must be an instance method on the code-behind.")]
     private void OnEntryRowLoaded(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { DataContext: EntryViewModel item })
         {
             // Fire and forget is fine (EnsureThumbnailAsync handles exceptions internally and updates display on the UI thread).
-            _ = ViewModel.EnsureThumbnailForAsync(item);
+            _ = item.EnsureThumbnailAsync();
         }
     }
 

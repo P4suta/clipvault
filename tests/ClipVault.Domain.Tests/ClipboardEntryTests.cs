@@ -84,10 +84,14 @@ public class ClipboardEntryTests
     private sealed class AlwaysEvictPolicy : IRetentionPolicy
     {
         public bool ShouldEvict(ClipboardEntry entry, DateTimeOffset now) => true;
+
+        public DateTimeOffset EvictionCutoff(DateTimeOffset now) => DateTimeOffset.MaxValue;
     }
 
     private sealed class NeverEvictPolicy : IRetentionPolicy
     {
         public bool ShouldEvict(ClipboardEntry entry, DateTimeOffset now) => false;
+
+        public DateTimeOffset EvictionCutoff(DateTimeOffset now) => DateTimeOffset.MinValue;
     }
 }

@@ -21,8 +21,9 @@ namespace ClipVaultApp;
 /// </summary>
 internal static class HostBuilderExtensions
 {
-    // Overall retention byte cap (a fixed value that is not exposed in the settings UI).
-    private const long MaxTotalBytes = 256L * 1024 * 1024;
+    // RAM budget for the volatile (in-memory) ring. Volatile mode keeps content in RAM, so its bound is memory,
+    // not disk; persistent mode uses the larger on-disk quota (ClipVaultSettings.MaxHistoryBytes) instead.
+    private const long VolatileMemoryBudgetBytes = 256L * 1024 * 1024;
 
     /// <summary>
     /// Registers the services for each layer (presentation, application, and infrastructure) with the host.
@@ -68,12 +69,17 @@ internal static class HostBuilderExtensions
         // Replace the default in-memory settings service with the persisted JSON implementation (the already-loaded instance).
         builder.Services.Replace(ServiceDescriptor.Singleton<ISettingsService>(settings));
 
-        // Build the retention policy from the configured values and swap it in (the total byte cap is fixed).
+        // Build the retention policy from the configured values and swap it in. The byte budget differs by mode:
+        // volatile mode is a bounded RAM ring, persistent mode is bounded by the on-disk quota. A non-positive
+        // entry cap means "no count limit", leaving the byte quota and age as the bounds.
+        var maxBytes = settings.Current.Storage == StorageMode.VolatileMemory
+            ? VolatileMemoryBudgetBytes
+            : settings.Current.MaxHistoryBytes;
         builder.Services.Replace(ServiceDescriptor.Singleton(new RetentionSettings
         {
             MaxAge = TimeSpan.FromDays(settings.Current.MaxAgeDays),
-            MaxEntries = settings.Current.MaxEntries,
-            MaxTotalBytes = MaxTotalBytes,
+            MaxEntries = settings.Current.MaxEntries <= 0 ? int.MaxValue : settings.Current.MaxEntries,
+            MaxTotalBytes = maxBytes,
         }));
 
         return builder;
