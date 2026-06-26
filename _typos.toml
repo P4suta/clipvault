@@ -7,6 +7,9 @@ extend-exclude = [".clusterfuzzlite/seeds/"]
 [default.extend-words]
 # Intentional minimal-difference test data (e.g. KeyedHash("abc") != KeyedHash("abd")).
 abd = "abd"
+# MSVC output-file flags in the launcher build (rc.exe /fo, cl.exe /Fo), not misspellings of "of"/"for".
+fo = "fo"
+Fo = "Fo"
 # URL tracking-parameter prefixes stripped by UrlTrackingStripper (not misspellings).
 hsa = "hsa"
 oly = "oly"

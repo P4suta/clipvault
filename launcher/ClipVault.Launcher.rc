@@ -1,0 +1,59 @@
+// Resources for the ClipVault root launcher: the application icon (so Explorer shows the
+// ClipVault icon), the side-by-side manifest, and a version block. The numeric version is
+// overridable at compile time via the integer /D CLIPVAULT_VERSION_{MAJOR,MINOR,PATCH} defines to
+// stamp the release tag (see build.ps1); it defaults to 0.0.0 for local builds. The display string
+// is derived from those integers so no quoted string has to survive the command line.
+
+#include <windows.h>
+
+// Icon id 1 becomes the executable's default icon (lowest-numbered icon wins in Explorer).
+1 ICON "..\\src\\ClipVault.App\\Assets\\AppIcon.ico"
+
+// Embed the manifest directly so no external .manifest file needs to ship next to the exe.
+1 RT_MANIFEST "ClipVault.Launcher.manifest"
+
+#ifndef CLIPVAULT_VERSION_MAJOR
+#define CLIPVAULT_VERSION_MAJOR 0
+#endif
+#ifndef CLIPVAULT_VERSION_MINOR
+#define CLIPVAULT_VERSION_MINOR 0
+#endif
+#ifndef CLIPVAULT_VERSION_PATCH
+#define CLIPVAULT_VERSION_PATCH 0
+#endif
+
+// Stringize the numeric version into "MAJOR.MINOR.PATCH" via adjacent literal concatenation.
+#define CV_STRINGIZE2(x) #x
+#define CV_STRINGIZE(x) CV_STRINGIZE2(x)
+#define CLIPVAULT_VERSION_STRING \
+    CV_STRINGIZE(CLIPVAULT_VERSION_MAJOR) "." \
+    CV_STRINGIZE(CLIPVAULT_VERSION_MINOR) "." \
+    CV_STRINGIZE(CLIPVAULT_VERSION_PATCH)
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION CLIPVAULT_VERSION_MAJOR,CLIPVAULT_VERSION_MINOR,CLIPVAULT_VERSION_PATCH,0
+ PRODUCTVERSION CLIPVAULT_VERSION_MAJOR,CLIPVAULT_VERSION_MINOR,CLIPVAULT_VERSION_PATCH,0
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0x0L
+ FILEOS VOS_NT_WINDOWS32
+ FILETYPE VFT_APP
+ FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "ClipVault"
+            VALUE "FileDescription", "ClipVault launcher"
+            VALUE "FileVersion", CLIPVAULT_VERSION_STRING
+            VALUE "InternalName", "ClipVault.exe"
+            VALUE "OriginalFilename", "ClipVault.exe"
+            VALUE "ProductName", "ClipVault"
+            VALUE "ProductVersion", CLIPVAULT_VERSION_STRING
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

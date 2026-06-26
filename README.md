@@ -67,6 +67,8 @@ just                # list every recipe
 Releases are produced by `.github/workflows/release.yml` on a `v*.*.*` tag. Each release ships a self-contained
 build with:
 
+- A `ClipVault-<version>-win-x64.zip` that extracts to a single `ClipVault/` folder: double-click `ClipVault.exe`
+  at the root to start (the app body and its dependencies live in the `app/` subfolder).
 - **SLSA build provenance** and an attested **CycloneDX SBOM**, both bound to the binary's digest.
 - `SHA256SUMS.txt` for the assets.
 - Code signing (SSL.com) activates automatically once signing secrets are configured; until then binaries are
