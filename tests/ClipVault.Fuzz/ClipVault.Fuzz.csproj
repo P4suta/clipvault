@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    SharpFuzz + libFuzzer harness for ClipVault.Application's untrusted-input parsing surface.
+
+    Built ONLY inside the ClusterFuzzLite Docker container on Linux (see ../../.clusterfuzzlite/).
+    It is deliberately NOT listed in ClipVault.slnx: the Windows dev/CI flow restores the solution
+    in locked mode, and keeping this Linux-only tool out of that graph means the committed lockfiles
+    and the strict analyze/coverage gates stay completely untouched.
+
+    The repo-root Directory.Build.props still applies (it walks the directory tree, not the solution),
+    so the properties below opt this harness out of the conventions that only make sense for shipped
+    code: XML doc generation, the analyzer/style gates, and per-project lockfiles. Central Package
+    Management stays ON (the inherited analyzer PackageReferences resolve their versions from it); the
+    SharpFuzz version is pinned in Directory.Packages.props.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- The Linux fuzzing image has no ICU; run ICU-free. The fuzzed paths are CultureInvariant regex,
+         Uri, and JSON parsing, so invariant globalization does not change what is being fuzzed. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+    <RunAnalyzers>false</RunAnalyzers>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SharpFuzz" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ClipVault.Application\ClipVault.Application.csproj" />
+  </ItemGroup>
+
+</Project>

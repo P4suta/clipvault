@@ -5,6 +5,12 @@
 *.sh text eol=lf
 Justfile text eol=lf
 
+# Read by Linux tooling (Docker, ClusterFuzzLite); CRLF would break them.
+.clusterfuzzlite/Dockerfile text eol=lf
+.clusterfuzzlite/project.yaml text eol=lf
+.dockerignore text eol=lf
+.clusterfuzzlite/seeds/* binary
+
 # License/attribution text stays LF (matches project-template).
 LICENSE text eol=lf
 NOTICE text eol=lf

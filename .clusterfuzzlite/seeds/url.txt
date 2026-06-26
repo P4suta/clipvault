@@ -1,0 +1,1 @@
+https://example.com/path?utm_source=news&id=42&fbclid=abc123&gclid=xyz#section
