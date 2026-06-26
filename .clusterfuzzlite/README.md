@@ -26,14 +26,15 @@ so the Windows `--locked-mode` restore and the analyze/coverage gates stay untou
 
 ## The single fuzz target
 
-`build.sh` emits one target, `$OUT/clipvault_fuzzer`, in three parts:
+`build.sh` emits one target:
 
-- `clipvault_fuzzer` — a wrapper. OSS-Fuzz detects any executable whose name ends in `_fuzzer` as a
-  fuzz target, so this is what ClusterFuzzLite runs; it forwards libFuzzer's args to the launcher with
-  `--target_path` baked in (the launcher only takes the managed target via that flag, never the env).
-- `clipvault_fuzzer.launcher` — the compiled libfuzzer-dotnet driver. The `.launcher` extension keeps
-  OSS-Fuzz from also detecting it as a target.
-- `clipvault-harness/` — the self-contained, instrumented .NET harness (no runtime needed at fuzz time).
+- `$OUT/clipvault_fuzzer` — the compiled libfuzzer-dotnet launcher (a real libFuzzer binary, so
+  OSS-Fuzz detects and instrument-checks it). Stock libfuzzer-dotnet only takes its managed target via
+  `--target_path`, but OSS-Fuzz's bad-build check runs the target with no flags, so the Dockerfile
+  patches it to **self-locate** the harness: next to the binary, then the build-time `$OUT`
+  (`-DBUILD_OUT_TARGET`, where bad-build leaves the harness), then the run-time `/out`.
+- `$OUT/clipvault-harness/` — the self-contained, instrumented .NET harness it drives (no runtime
+  needed at fuzz time). Not a libFuzzer binary, so it is never mistaken for a second target.
 
 ## Validate locally
 
