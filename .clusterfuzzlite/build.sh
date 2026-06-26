@@ -1,14 +1,14 @@
 #!/bin/bash -eu
 # ClusterFuzzLite build for the ClipVault.Fuzz C#/.NET libFuzzer harness.
 #
-# Produces a single fuzz target, $OUT/clipvault_fuzzer, made of three pieces:
-#   clipvault_fuzzer           - a tiny wrapper. OSS-Fuzz treats any executable whose name ends in
-#                                `_fuzzer` as a fuzz target, so this is the entry ClusterFuzzLite runs;
-#                                it forwards libFuzzer's args to the launcher with the harness baked in.
-#   clipvault_fuzzer.launcher  - the compiled libfuzzer-dotnet driver (a real libFuzzer binary). The
-#                                `.launcher` extension keeps OSS-Fuzz from also detecting it as a target.
-#   clipvault-harness/         - the self-contained, SharpFuzz-instrumented .NET harness, so the
-#                                OSS-Fuzz run image needs no .NET runtime of its own.
+# Produces a single fuzz target, $OUT/clipvault_fuzzer (the libfuzzer-dotnet launcher), plus
+# $OUT/clipvault-harness/ — the self-contained, SharpFuzz-instrumented .NET harness it drives, so the
+# OSS-Fuzz run image needs no .NET runtime of its own.
+#
+# The launcher is patched (in the Dockerfile) to self-locate the managed harness when it is run
+# without --target_path, so it is a valid standalone OSS-Fuzz target: OSS-Fuzz's bad-build check runs
+# the target binary in isolation with no flags, and the launcher then resolves the harness via its own
+# location, the build-time $OUT (pinned below), or the run-time /out.
 
 cd "$SRC/clipvault"
 
@@ -29,21 +29,13 @@ for assembly in ClipVault.Application.dll ClipVault.Domain.dll; do
   sharpfuzz "$harness_out/$assembly"
 done
 
-# 3. Compile the libfuzzer-dotnet launcher, linked with the OSS-Fuzz fuzzing engine + sanitizer flags.
-$CXX $CXXFLAGS "$SRC/libfuzzer-dotnet.cc" -o "$OUT/clipvault_fuzzer.launcher" $LIB_FUZZING_ENGINE
+# 3. Compile the self-locating launcher as the single fuzz target, linked with the OSS-Fuzz fuzzing
+#    engine + sanitizer flags. BUILD_OUT_TARGET pins the build-time harness path for the bad-build
+#    check (which copies the target binary away from $OUT before running it).
+$CXX $CXXFLAGS -DBUILD_OUT_TARGET="\"$harness_out/ClipVault.Fuzz\"" \
+  "$SRC/libfuzzer-dotnet.cc" -o "$OUT/clipvault_fuzzer" $LIB_FUZZING_ENGINE
 
-# 4. Emit the wrapper ClusterFuzzLite runs. libfuzzer-dotnet only accepts the managed target via
-#    --target_path (it never reads the environment), so bake it in and forward all libFuzzer args.
-cat > "$OUT/clipvault_fuzzer" <<'EOF'
-#!/bin/bash
-here="$(dirname "$(readlink -f "$0")")"
-exec "$here/clipvault_fuzzer.launcher" \
-  --target_path="$here/clipvault-harness/ClipVault.Fuzz" \
-  "$@"
-EOF
-chmod +x "$OUT/clipvault_fuzzer"
-
-# 5. Bundle the seed corpus as OSS-Fuzz expects (<target>_seed_corpus.zip beside the target).
+# 4. Bundle the seed corpus as OSS-Fuzz expects (<target>_seed_corpus.zip beside the target).
 if [ -d "$SRC/clipvault/.clusterfuzzlite/seeds" ]; then
   (cd "$SRC/clipvault/.clusterfuzzlite/seeds" && zip -qr "$OUT/clipvault_fuzzer_seed_corpus.zip" .)
 fi

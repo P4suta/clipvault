@@ -38,6 +38,13 @@ RUN curl -fsSL \
     "https://raw.githubusercontent.com/Metalnem/libfuzzer-dotnet/${LIBFUZZER_DOTNET_REF}/libfuzzer-dotnet.cc" \
     -o "${SRC}/libfuzzer-dotnet.cc"
 
+# Patch the launcher to self-locate the managed harness when run without --target_path. Stock
+# libfuzzer-dotnet dies in that case, but OSS-Fuzz's bad-build check runs the target binary in
+# isolation with no flags, so a standalone target must resolve its harness itself: next to the binary,
+# then the build-time $OUT (-DBUILD_OUT_TARGET, where bad-build leaves the harness), then run-time /out.
+RUN sed -i 's#die("You must specify the target path by using the --target_path command line flag.");#{ static char _p[4096]; ssize_t _n = readlink("/proc/self/exe", _p, sizeof(_p) - 64); if (_n > 0) { _p[_n] = 0; char *_s = strrchr(_p, 0x2f); if (_s) { strcpy(_s, "/clipvault-harness/ClipVault.Fuzz"); if (access(_p, 0) == 0) target_path = _p; } } if (!target_path \&\& access(BUILD_OUT_TARGET, 0) == 0) target_path = BUILD_OUT_TARGET; if (!target_path \&\& access("/out/clipvault-harness/ClipVault.Fuzz", 0) == 0) target_path = "/out/clipvault-harness/ClipVault.Fuzz"; if (!target_path) die("Could not locate the .NET fuzz target."); }#' "${SRC}/libfuzzer-dotnet.cc" \
+    && grep -q clipvault-harness "${SRC}/libfuzzer-dotnet.cc"
+
 COPY . ${SRC}/clipvault
 WORKDIR ${SRC}/clipvault
 
