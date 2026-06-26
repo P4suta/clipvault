@@ -1,39 +1,60 @@
-# Release pipeline: build the self-contained app, generate an SBOM, (optionally) code-sign, then
-# bind SLSA build provenance + the SBOM to the binary and publish a GitHub Release.
+# Release pipeline, split into three least-privilege jobs to shrink the blast radius of the signing
+# secrets:
+#   build   -> publishes the self-contained app + SBOM. Holds NO secrets, read-only token.
+#   sign    -> Authenticode-signs the binary with SSL.com eSigner. This is the only job that sees the
+#              signing secrets, so it runs in the approval-gated `release` environment.
+#   publish -> stages zips/checksums from the SIGNED binary, binds keyless build-provenance + SBOM
+#              attestations (Sigstore via the OIDC GITHUB_TOKEN - no stored secrets), and cuts the
+#              GitHub Release.
 #
 # Trust model: even while the binary is UNSIGNED, every release carries cryptographic provenance
 # (Sigstore-backed, keyless) that anyone can verify with `gh attestation verify`. Code signing is a
-# dormant step that activates automatically once the SSL.com eSigner (ES_*) secrets are configured;
-# it runs before staging/attestation, so provenance then binds to the signed binary with no rework.
+# dormant step that activates automatically once the SSL.com eSigner (ES_*) secrets are configured in
+# the `release` environment; signing happens before staging/attestation, so provenance then binds to
+# the signed binary with no rework. The attestation signer identity is the workflow file path, so the
+# job split does not change `--signer-workflow .github/workflows/release.yml`.
+#
+# Dry run: trigger via `workflow_dispatch` with publish=false to exercise build+sign+verify without
+# creating a Release or attestations (safe even under immutable releases).
 name: release
 
 on:
   push:
     tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Tag or ref to build from (e.g. v0.1.0, or main for a signing smoke test)"
+        required: true
+        type: string
+      publish:
+        description: "Publish a GitHub Release (false = build+sign+verify only, no release/attestations)"
+        required: false
+        default: true
+        type: boolean
 
-# Deny by default at the workflow scope; the release job grants only what it needs.
+# Deny by default at the workflow scope; each job grants only the scopes it needs.
 permissions: {}
 
 concurrency:
-  group: release-${{ github.ref }}
+  # Key on the resolved tag/ref so manual and tag-driven runs of the same release serialize.
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
   cancel-in-progress: false # never kill a half-finished release (attestations may already be created)
 
 env:
   CI: "true"
-  # Surfaced at job scope so the signing step's `if:` can detect whether signing is configured.
-  # (Secrets cannot be read directly in an `if:`; an env var derived from a secret can.)
-  ES_USERNAME: ${{ secrets.ES_USERNAME }}
+  # Single source of truth for the ref to build/release from, for both triggers.
+  TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
 
 jobs:
-  release:
+  build:
     runs-on: windows-latest
     permissions:
-      contents: write # create the GitHub Release and upload assets
-      id-token: write # OIDC token used to sign the attestations (Sigstore)
-      attestations: write # write build-provenance + SBOM attestations to the repo
+      contents: read # only reads the repository; holds no secrets
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          ref: ${{ env.TAG }}
           persist-credentials: false
 
       - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
@@ -45,7 +66,7 @@ jobs:
       - name: Derive version from tag
         id: ver
         shell: bash
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        run: echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
 
       # Validate lockfile integrity for the standard graph before building.
       - name: Restore (locked)
@@ -63,10 +84,44 @@ jobs:
       - name: Generate SBOM
         run: mise exec -- just sbom ${{ steps.ver.outputs.version }}
 
-      # Dormant until the SSL.com eSigner secrets exist. Signs in place so the staged zip and the
-      # attestation subjects below are the SIGNED binary. environment_name=PROD for a real cert.
-      - name: Code sign (SSL.com eSigner) — skipped until ES_* secrets are set
-        if: ${{ env.ES_USERNAME != '' }}
+      # Hand the unsigned publish output + SBOM to the sign job. Zips/checksums are intentionally NOT
+      # created here: they must be staged from the SIGNED binary (in publish) so they always match.
+      - name: Upload build output
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-output
+          path: |
+            artifacts/publish/win-x64/
+            artifacts/sbom/clipvault.cdx.json
+          if-no-files-found: error
+          retention-days: 1
+
+  sign:
+    needs: build
+    runs-on: windows-latest
+    # Approval-gated environment: required reviewers must approve before this job (the only holder of
+    # the signing secrets) runs. ES_* live as environment secrets here, invisible to build/publish.
+    environment: release
+    permissions:
+      contents: read
+    env:
+      # secrets.* cannot be referenced in `if:`; hoist presence to a job-level env bool, then gate the
+      # signing steps on env.HAVE_SIGNING. Environment-scoped secrets resolve only in this job.
+      HAVE_SIGNING: ${{ secrets.ES_USERNAME != '' && secrets.ES_CREDENTIAL_ID != '' }}
+      # The signed binary's expected certificate subject; a mismatch means a cert swap (hard-fail).
+      SIGNER_SUBJECT_CONTAINS: "CN=Yasunobu Sakashita"
+    steps:
+      - name: Download build output
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: build-output
+          path: artifacts
+
+      # Dormant until the SSL.com eSigner secrets exist in the `release` environment. Signs in place so
+      # the staged zip and the attestation subjects in publish are the SIGNED binary. environment_name
+      # is the eSigner CA environment (PROD = real cert).
+      - name: Code sign (SSL.com eSigner)
+        if: ${{ env.HAVE_SIGNING == 'true' }}
         uses: sslcom/esigner-codesign@cf5f6c1d38ad10f47e3ed9aca873f429b1a8d85b # v1.3.2
         with:
           command: sign
@@ -78,6 +133,72 @@ jobs:
           override: "true"
           malware_block: "false"
           environment_name: "PROD"
+
+      # Signing is non-blocking: a release with no configured cert still ships (with provenance), it is
+      # just unsigned. Surface it loudly so it is a deliberate state, not a silent regression.
+      - name: Warn if unsigned
+        if: ${{ env.HAVE_SIGNING != 'true' }}
+        shell: bash
+        run: echo "::warning::Signing secrets absent — publishing UNSIGNED binaries (SmartScreen will warn end users)."
+
+      # Hard-verify the Authenticode signature independently of the signing action: enforce a full chain
+      # + RFC3161 timestamp (signtool exit 2 = untimestamped, treated as failure) and assert the signer
+      # subject, so a swapped/expired/untimestamped cert fails the release rather than shipping.
+      - name: Verify Authenticode signature
+        if: ${{ env.HAVE_SIGNING == 'true' }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $exe = "artifacts/publish/win-x64/ClipVault.App.exe"
+
+          $signtool = Get-ChildItem "C:/Program Files (x86)/Windows Kits/10/bin/*/x64/signtool.exe" -ErrorAction SilentlyContinue |
+            Sort-Object FullName | Select-Object -Last 1
+          if (-not $signtool) {
+            throw "signtool.exe not found in the Windows SDK on the runner"
+          }
+
+          # /pa = default authenticode policy, /tw = require a timestamp (warning -> error via exit code).
+          & $signtool.FullName verify /pa /tw /v $exe
+          if ($LASTEXITCODE -ne 0) { throw "signtool verify failed (exit $LASTEXITCODE): chain or timestamp invalid" }
+
+          $sig = Get-AuthenticodeSignature $exe
+          if ($sig.Status -ne "Valid") { throw "signature status is $($sig.Status), expected Valid" }
+          $subject = $sig.SignerCertificate.Subject
+          if ($subject -notlike "*$env:SIGNER_SUBJECT_CONTAINS*") {
+            throw "unexpected signer subject: $subject (expected to contain $env:SIGNER_SUBJECT_CONTAINS)"
+          }
+          Write-Host "Authenticode signature verified: $subject"
+
+      - name: Upload signed output
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: signed-output
+          path: |
+            artifacts/publish/win-x64/
+            artifacts/sbom/clipvault.cdx.json
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: sign
+    runs-on: windows-latest
+    # Skip on a dry-run dispatch (publish=false): no Release, no attestations. Tag pushes always publish.
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
+    permissions:
+      contents: write # create the GitHub Release and upload assets
+      id-token: write # OIDC token used to sign the attestations (Sigstore)
+      attestations: write # write build-provenance + SBOM attestations to the repo
+    steps:
+      - name: Download signed output
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: signed-output
+          path: artifacts
+
+      - name: Derive version from tag
+        id: ver
+        shell: bash
+        run: echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
 
       - name: Stage release assets (zips + SBOM + checksums)
         id: stage
@@ -94,7 +215,7 @@ jobs:
           ( cd artifacts/release && sha256sum -- * > SHA256SUMS.txt )
           echo "Staged:"; ls -la artifacts/release
 
-      # SLSA build provenance, bound to the raw exe and both distributed zips (runtime + symbols).
+      # SLSA build provenance, bound to the signed exe and both distributed zips (runtime + symbols).
       - name: Attest build provenance
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
@@ -138,7 +259,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh release create "$GITHUB_REF_NAME" \
+          gh release create "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --title "ClipVault ${{ steps.ver.outputs.version }}" \
             --generate-notes \
