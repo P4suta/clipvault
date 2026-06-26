@@ -16,6 +16,9 @@ namespace ClipVaultApp.ViewModels;
 /// </summary>
 public sealed partial class EntryViewModel : ObservableObject
 {
+    /// <summary>Fetches the thumbnail bytes on demand (so list rows do not carry them); null falls back to the entry's own bytes.</summary>
+    private readonly Func<EntryId, CancellationToken, Task<byte[]?>>? _thumbnailProvider;
+
     /// <summary>Flag that ensures the thumbnail is decoded only once.</summary>
     private bool _isThumbnailLoadStarted;
 
@@ -25,11 +28,17 @@ public sealed partial class EntryViewModel : ObservableObject
     /// <param name="entry">The underlying domain entity wrapped by this row.</param>
     /// <param name="kind">The detected content kind used for the badge.</param>
     /// <param name="kindLabel">The localized label shown on the badge.</param>
-    public EntryViewModel(ClipboardEntry entry, ContentKind kind, string kindLabel)
+    /// <param name="thumbnailProvider">Fetches the thumbnail bytes on demand; when null, the entry's own bytes are used.</param>
+    public EntryViewModel(
+        ClipboardEntry entry,
+        ContentKind kind,
+        string kindLabel,
+        Func<EntryId, CancellationToken, Task<byte[]?>>? thumbnailProvider = null)
     {
         Entry = entry ?? throw new ArgumentNullException(nameof(entry));
         Kind = kind;
         KindLabel = kindLabel ?? string.Empty;
+        _thumbnailProvider = thumbnailProvider;
     }
 
     /// <summary>Gets the underlying domain entity passed to the action service.</summary>
@@ -87,19 +96,23 @@ public sealed partial class EntryViewModel : ObservableObject
 
         _isThumbnailLoadStarted = true;
 
-        var image = Entry.Image;
-        if (image is null || image.Thumbnail.Length == 0)
-        {
-            return;
-        }
-
         try
         {
+            // With a provider, the thumbnail bytes are fetched (and decrypted) on demand; without one, fall back to
+            // any bytes carried on the entry itself (used by tests that build an entry with an inline thumbnail).
+            var bytes = _thumbnailProvider is not null
+                ? await _thumbnailProvider(Entry.Id, CancellationToken.None)
+                : Entry.Image?.Thumbnail;
+            if (bytes is not { Length: > 0 })
+            {
+                return;
+            }
+
             var bitmap = new BitmapImage();
             using var stream = new InMemoryRandomAccessStream();
             using (var writer = new DataWriter(stream))
             {
-                writer.WriteBytes(image.Thumbnail);
+                writer.WriteBytes(bytes);
                 await writer.StoreAsync();
                 await writer.FlushAsync();
                 writer.DetachStream();

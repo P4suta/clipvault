@@ -1,4 +1,5 @@
 using System.Text;
+using ClipVault.Domain.Abstractions;
 using ClipVault.Domain.Entities;
 using ClipVault.Domain.ValueObjects;
 using ClipVault.Infrastructure.Persistence;
@@ -239,6 +240,160 @@ public class SqliteClipboardHistoryRepositoryTests
         Assert.Equal(second.Id, found!.Id);
         Assert.Equal("two", found.Preview);
     }
+
+    [Fact]
+    public async Task DeleteExpired_removes_unpinned_older_than_cutoff_and_keeps_pinned()
+    {
+        using var repo = NewRepo();
+        var pinnedOld = TextEntry("p", "p", T0.AddMinutes(1));
+        await repo.AddAsync(pinnedOld, Text("p"));
+        pinnedOld.Pin();
+        await repo.UpdateAsync(pinnedOld);
+        await repo.AddAsync(TextEntry("o", "o", T0.AddMinutes(2)), Text("o"));
+        await repo.AddAsync(TextEntry("r", "r", T0.AddMinutes(10)), Text("r"));
+
+        var removed = await repo.DeleteExpiredAsync(T0.AddMinutes(5));
+
+        Assert.Equal(1, removed); // only the unpinned "o" captured before the cutoff
+        string[] survivors = ["p", "r"];
+        Assert.Equal(survivors, (await repo.GetAllAsync()).Select(e => e.Preview));
+    }
+
+    [Fact]
+    public async Task Trim_keeps_most_recent_within_count_budget()
+    {
+        using var repo = NewRepo();
+        await repo.AddAsync(TextEntry("a", "a", T0.AddMinutes(1)), Text("a"));
+        await repo.AddAsync(TextEntry("b", "b", T0.AddMinutes(2)), Text("b"));
+        await repo.AddAsync(TextEntry("c", "c", T0.AddMinutes(3)), Text("c"));
+
+        var removed = await repo.TrimAsync(maxEntries: 1, maxTotalBytes: long.MaxValue);
+
+        Assert.Equal(2, removed);
+        string[] survivors = ["c"];
+        Assert.Equal(survivors, (await repo.GetAllAsync()).Select(e => e.Preview));
+    }
+
+    [Fact]
+    public async Task Trim_running_sum_evicts_everything_after_budget_first_exceeded()
+    {
+        // Parity with the InMemory store: sizes 100/200/50 most-recent-first, running 100/300/350, budget 200.
+        using var repo = NewRepo();
+        await repo.AddAsync(Sized("newest", 100, T0.AddMinutes(3)), Text("n"));
+        await repo.AddAsync(Sized("middle", 200, T0.AddMinutes(2)), Text("m"));
+        await repo.AddAsync(Sized("small", 50, T0.AddMinutes(1)), Text("s"));
+
+        var removed = await repo.TrimAsync(maxEntries: 100, maxTotalBytes: 200);
+
+        Assert.Equal(2, removed);
+        string[] survivors = ["newest"];
+        Assert.Equal(survivors, (await repo.GetAllAsync()).Select(e => e.Preview));
+    }
+
+    [Fact]
+    public async Task Trim_keeps_single_newest_even_when_it_exceeds_byte_budget()
+    {
+        using var repo = NewRepo();
+        await repo.AddAsync(Sized("only", 1000, T0.AddMinutes(1)), Text("x"));
+
+        Assert.Equal(0, await repo.TrimAsync(maxEntries: 100, maxTotalBytes: 10)); // rank 1 is always kept
+    }
+
+    [Fact]
+    public async Task GetPage_returns_entries_in_the_same_order_as_get_all()
+    {
+        using var repo = NewRepo();
+        var a = TextEntry("a", "a", T0.AddMinutes(1));
+        var b = TextEntry("b", "b", T0.AddMinutes(2));
+        var c = TextEntry("c", "c", T0.AddMinutes(3));
+        await repo.AddAsync(a, Text("a"));
+        await repo.AddAsync(b, Text("b"));
+        await repo.AddAsync(c, Text("c"));
+        b.Pin();
+        await repo.UpdateAsync(b);
+
+        var paged = await DrainAsync(repo, pageSize: 2);
+        var all = await repo.GetAllAsync();
+
+        Assert.Equal(all.Select(e => e.Preview), paged.Select(e => e.Preview));
+    }
+
+    [Fact]
+    public async Task GetPage_pages_through_all_entries_without_gaps_or_duplicates_even_with_tied_timestamps()
+    {
+        using var repo = NewRepo();
+        var seeded = new List<ClipboardEntry>();
+        for (var i = 0; i < 5; i++)
+        {
+            // Identical timestamps force every comparison onto the id tiebreak (BLOB memcmp must match the cursor).
+            var entry = TextEntry($"h{i}", $"p{i}", T0);
+            await repo.AddAsync(entry, Text($"p{i}"));
+            seeded.Add(entry);
+        }
+
+        var paged = await DrainAsync(repo, pageSize: 2);
+
+        Assert.Equal(5, paged.Count);
+        Assert.Equal(seeded.Select(e => e.Id).ToHashSet(), paged.Select(e => e.Id).ToHashSet());
+    }
+
+    [Fact]
+    public async Task GetPage_omits_thumbnail_bytes_but_keeps_dimensions()
+    {
+        using var repo = NewRepo();
+        var image = new ImagePreview(new byte[] { 9, 8, 7 }, Width: 10, Height: 5);
+        var entry = ClipboardEntry.Create(
+            ClipContentType.Image, new ContentHash("img"), "Image 10x5", image, sizeInBytes: 4, SourceApplication.Unknown, T0);
+        await repo.AddAsync(entry, new ClipContent(ClipContentType.Image, new byte[] { 1, 2, 3, 4 }));
+
+        var got = Assert.Single((await repo.GetPageAsync(null, 10)).Entries);
+
+        Assert.NotNull(got.Image);
+        Assert.Empty(got.Image!.Thumbnail); // bytes omitted from the list projection
+        Assert.Equal(10, got.Image.Width);
+        Assert.Equal(5, got.Image.Height);
+    }
+
+    [Fact]
+    public async Task GetThumbnail_returns_bytes_for_an_image_and_null_for_text_or_missing()
+    {
+        using var repo = NewRepo();
+        var image = new ImagePreview(new byte[] { 9, 8, 7 }, Width: 10, Height: 5);
+        var imageEntry = ClipboardEntry.Create(
+            ClipContentType.Image, new ContentHash("img"), "Image 10x5", image, sizeInBytes: 4, SourceApplication.Unknown, T0);
+        await repo.AddAsync(imageEntry, new ClipContent(ClipContentType.Image, new byte[] { 1, 2, 3, 4 }));
+        var textEntry = TextEntry("t", "txt", T0);
+        await repo.AddAsync(textEntry, Text("txt"));
+
+        Assert.Equal(new byte[] { 9, 8, 7 }, await repo.GetThumbnailAsync(imageEntry.Id));
+        Assert.Null(await repo.GetThumbnailAsync(textEntry.Id));
+        Assert.Null(await repo.GetThumbnailAsync(EntryId.New()));
+    }
+
+    private static async Task<List<ClipboardEntry>> DrainAsync(SqliteClipboardHistoryRepository repo, int pageSize)
+    {
+        var all = new List<ClipboardEntry>();
+        HistoryCursor? cursor = null;
+        do
+        {
+            var page = await repo.GetPageAsync(cursor, pageSize);
+            all.AddRange(page.Entries);
+            cursor = page.NextCursor;
+        }
+        while (cursor is not null);
+
+        return all;
+    }
+
+    private static ClipboardEntry Sized(string hash, long size, DateTimeOffset at) =>
+        ClipboardEntry.Create(
+            ClipContentType.Text,
+            new ContentHash(hash),
+            hash,
+            image: null,
+            sizeInBytes: size,
+            SourceApplication.Unknown,
+            capturedAt: at);
 
     private static SqliteClipboardHistoryRepository NewRepo() =>
         new(

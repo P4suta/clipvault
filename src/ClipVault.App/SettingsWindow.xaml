@@ -350,7 +350,7 @@
                                         MinWidth="{StaticResource InputMinWidth}"
                                         AutomationProperties.AutomationId="MaxEntriesBox"
                                         AutomationProperties.Name="{loc:Str Key=Settings.Retention.MaxEntries}"
-                                        Maximum="100000"
+                                        Maximum="1000000"
                                         Minimum="1"
                                         SmallChange="10"
                                         SpinButtonPlacementMode="Inline"

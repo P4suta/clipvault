@@ -99,7 +99,9 @@ public sealed class JsonSettingsService : ISettingsService
 
         public int MaxAgeDays { get; init; } = 30;
 
-        public int MaxEntries { get; init; } = 500;
+        public int MaxEntries { get; init; } = 100_000;
+
+        public long MaxHistoryBytes { get; init; } = 2L * 1024 * 1024 * 1024;
 
         public bool RunAtStartup { get; init; }
 
@@ -116,6 +118,7 @@ public sealed class JsonSettingsService : ISettingsService
             MaxImageBytes = MaxImageBytes,
             MaxAgeDays = MaxAgeDays,
             MaxEntries = MaxEntries,
+            MaxHistoryBytes = MaxHistoryBytes,
             RunAtStartup = RunAtStartup,
             Language = Enum.TryParse<AppLanguage>(Language, out var language) ? language : AppLanguage.System,
             Theme = Enum.TryParse<AppTheme>(Theme, out var theme) ? theme : AppTheme.System,
@@ -130,6 +133,7 @@ public sealed class JsonSettingsService : ISettingsService
             MaxImageBytes = s.MaxImageBytes,
             MaxAgeDays = s.MaxAgeDays,
             MaxEntries = s.MaxEntries,
+            MaxHistoryBytes = s.MaxHistoryBytes,
             RunAtStartup = s.RunAtStartup,
             Language = s.Language.ToString(),
             Theme = s.Theme.ToString(),

@@ -4,10 +4,12 @@ using ClipVault.Domain.Policies;
 namespace ClipVault.Application.Retention;
 
 /// <summary>
-/// Enforces the retention limits. It removes entries oldest-first, excluding pinned ones, in the order age, then count, then total size.
+/// Enforces the retention limits by delegating to the repository's content-free eviction primitives: first the
+/// age cutoff, then the count and total-size budget. Nothing is materialized into memory, so the sweep stays
+/// bounded regardless of how large the history is.
 /// </summary>
 /// <param name="repository">The clipboard history repository.</param>
-/// <param name="policy">The retention policy used to determine expiry.</param>
+/// <param name="policy">The retention policy that provides the age-based eviction cutoff.</param>
 /// <param name="settings">The retention settings (count and total-size limits).</param>
 public sealed class RetentionService(
     IClipboardHistoryRepository repository,
@@ -20,40 +22,8 @@ public sealed class RetentionService(
     /// <returns>A task that produces the number of entries removed.</returns>
     public async Task<int> EnforceAsync(DateTimeOffset now, CancellationToken cancellationToken = default)
     {
-        var all = await repository.GetAllAsync(cancellationToken);
-        var removed = 0;
-
-        // 1) Past the age limit (unpinned).
-        var expired = all.Where(entry => entry.IsExpired(policy, now)).ToList();
-        foreach (var entry in expired)
-        {
-            await repository.RemoveAsync(entry.Id, cancellationToken);
-            removed++;
-        }
-
-        // 2) Count and total-size limits (pinned entries are exempt; keep the most recent first).
-        var unpinned = all
-            .Where(entry => !entry.IsPinned && !entry.IsExpired(policy, now))
-            .OrderByDescending(entry => entry.LastUsedAt)
-            .ToList();
-
-        var kept = 0;
-        long cumulativeBytes = 0;
-        foreach (var entry in unpinned)
-        {
-            var overCount = kept >= settings.MaxEntries;
-            var overBytes = kept > 0 && cumulativeBytes + entry.SizeInBytes > settings.MaxTotalBytes;
-            if (overCount || overBytes)
-            {
-                await repository.RemoveAsync(entry.Id, cancellationToken);
-                removed++;
-                continue;
-            }
-
-            kept++;
-            cumulativeBytes += entry.SizeInBytes;
-        }
-
+        var removed = await repository.DeleteExpiredAsync(policy.EvictionCutoff(now), cancellationToken);
+        removed += await repository.TrimAsync(settings.MaxEntries, settings.MaxTotalBytes, cancellationToken);
         return removed;
     }
 }

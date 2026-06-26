@@ -8,5 +8,8 @@ public sealed class DefaultRetentionPolicy(RetentionSettings settings) : IRetent
 {
     /// <inheritdoc/>
     public bool ShouldEvict(ClipboardEntry entry, DateTimeOffset now) =>
-        !entry.IsPinned && now - entry.CapturedAt > settings.MaxAge;
+        !entry.IsPinned && entry.CapturedAt < EvictionCutoff(now);
+
+    /// <inheritdoc/>
+    public DateTimeOffset EvictionCutoff(DateTimeOffset now) => now - settings.MaxAge;
 }

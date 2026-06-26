@@ -11,6 +11,12 @@ internal static class ImageCodec
 {
     private const uint ThumbnailMaxDimension = 256;
 
+    // Upper bound on decoded image area. The pixel plane is materialized as BGRA (4 bytes/pixel) and
+    // SoftwareBitmap.Convert holds a second copy, so peak transient memory is ~8 bytes/pixel. Capping at
+    // ~64 megapixels (~512 MB peak) rejects decompression bombs before any pixel buffer is allocated, while
+    // still admitting 8K-class screenshots and camera photos. A safety invariant, deliberately not user-tunable.
+    private const long MaxDecodedPixels = 64L * 1000 * 1000;
+
     /// <summary>
     /// Decodes the image from the given stream into a full-size PNG and a thumbnail PNG.
     /// </summary>
@@ -30,6 +36,16 @@ internal static class ImageCodec
             decoder = await BitmapDecoder.CreateAsync(source);
         }
         catch
+        {
+            return null;
+        }
+
+        // Reject oversized images from the header dimensions (cheap to read) before GetSoftwareBitmapAsync
+        // allocates the full BGRA pixel plane. The per-dimension checks run first and short-circuit the area
+        // multiplication, so a corrupt/hostile header claiming enormous dimensions cannot overflow it.
+        long pixelWidth = decoder.PixelWidth;
+        long pixelHeight = decoder.PixelHeight;
+        if (pixelWidth > MaxDecodedPixels || pixelHeight > MaxDecodedPixels || pixelWidth * pixelHeight > MaxDecodedPixels)
         {
             return null;
         }

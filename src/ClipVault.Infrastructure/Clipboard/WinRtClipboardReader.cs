@@ -16,6 +16,11 @@ public static class WinRtClipboardReader
     // The strongest signal from the OS that content should not be kept in history (presence alone is decisive).
     private const string ExcludeFromMonitorFormat = "ExcludeClipboardContentFromMonitorProcessing";
 
+    // Upper bound on a captured text payload. GetByteCount measures without allocating, so oversized text is
+    // rejected before the second (byte[]) buffer is allocated and before it enters the encrypt/store pipeline.
+    // A whole book is ~1-5 MB, so 10 MB admits legitimate large copies while stopping pathological ones.
+    private const int MaxTextBytes = 10 * 1024 * 1024;
+
     /// <summary>
     /// Reads the current clipboard contents and converts them into a domain snapshot.
     /// </summary>
@@ -75,6 +80,13 @@ public static class WinRtClipboardReader
         }
 
         if (string.IsNullOrEmpty(text))
+        {
+            return null;
+        }
+
+        // Reject (rather than truncate) oversized text: truncation would corrupt the payload and desync the
+        // dedup hash and preview from the real content. Measured without allocating the byte buffer.
+        if (Encoding.UTF8.GetByteCount(text) > MaxTextBytes)
         {
             return null;
         }

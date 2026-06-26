@@ -44,7 +44,7 @@ public sealed class HistoryViewModelTests : IDisposable
 
         await _vm.LoadCommand.ExecuteAsync(null);
 
-        Assert.Equal(2, _vm.Entries.Count);
+        Assert.Equal(2, _vm.Entries!.Count);
         Assert.False(_vm.IsEmpty);
     }
 
@@ -65,7 +65,7 @@ public sealed class HistoryViewModelTests : IDisposable
 
         _vm.SelectedKindFilter = _vm.KindFilters.First(o => o.Kind == ContentKind.Url);
 
-        Assert.Equal("https://example.com", Assert.Single(_vm.Entries).Preview);
+        Assert.Equal("https://example.com", Assert.Single(_vm.Entries!).Preview);
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public sealed class HistoryViewModelTests : IDisposable
 
         _vm.SelectedAppFilter = _vm.AppFilters.First(o => string.Equals(o.App, "code", StringComparison.Ordinal));
 
-        Assert.Equal("from code", Assert.Single(_vm.Entries).Preview);
+        Assert.Equal("from code", Assert.Single(_vm.Entries!).Preview);
     }
 
     [Fact]
@@ -108,9 +108,9 @@ public sealed class HistoryViewModelTests : IDisposable
         await SeedAsync("a", "doomed");
         await _vm.LoadCommand.ExecuteAsync(null);
 
-        await _vm.DeleteCommand.ExecuteAsync(_vm.Entries.Single());
+        await _vm.DeleteCommand.ExecuteAsync(_vm.Entries!.Single());
 
-        Assert.Empty(_vm.Entries);
+        Assert.Empty(_vm.Entries!);
         Assert.Equal(0, await _repo.CountAsync());
     }
 
@@ -120,7 +120,7 @@ public sealed class HistoryViewModelTests : IDisposable
         var entry = await SeedAsync("a", "pin me");
         await _vm.LoadCommand.ExecuteAsync(null);
 
-        await _vm.TogglePinCommand.ExecuteAsync(_vm.Entries.Single());
+        await _vm.TogglePinCommand.ExecuteAsync(_vm.Entries!.Single());
 
         Assert.True(entry.IsPinned);
     }
@@ -133,7 +133,7 @@ public sealed class HistoryViewModelTests : IDisposable
         var raised = false;
         _vm.PasteRequested += (_, _) => raised = true;
 
-        await _vm.PasteCommand.ExecuteAsync(_vm.Entries.Single());
+        await _vm.PasteCommand.ExecuteAsync(_vm.Entries!.Single());
 
         Assert.True(raised);
         await _writer.Received(1).WriteAsync(Arg.Any<ClipContent>(), Arg.Any<CancellationToken>());
@@ -165,7 +165,7 @@ public sealed class HistoryViewModelTests : IDisposable
         await SeedAsync("u", "https://e.com", payload: "https://e.com/?utm_source=x&id=1");
         await _vm.LoadCommand.ExecuteAsync(null);
 
-        await _vm.ViewDetailCommand.ExecuteAsync(_vm.Entries.Single());
+        await _vm.ViewDetailCommand.ExecuteAsync(_vm.Entries!.Single());
 
         Assert.True(_vm.IsDetailOpen);
         Assert.True(_vm.CanCleanUrl);
@@ -182,7 +182,7 @@ public sealed class HistoryViewModelTests : IDisposable
     {
         await SeedAsync("u", "https://e.com", payload: "https://e.com/?utm_source=x&id=1");
         await _vm.LoadCommand.ExecuteAsync(null);
-        await _vm.ViewDetailCommand.ExecuteAsync(_vm.Entries.Single());
+        await _vm.ViewDetailCommand.ExecuteAsync(_vm.Entries!.Single());
 
         await _vm.CopyCleanedUrlCommand.ExecuteAsync(null);
 
