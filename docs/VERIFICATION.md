@@ -14,6 +14,9 @@ though the binary is not yet Authenticode code-signed*. This is the project's cu
   - `clipvault.cdx.json` — the CycloneDX SBOM
   - `SHA256SUMS.txt` — checksums of all assets
 
+The application zip extracts to a single `ClipVault/` folder. Run it by double-clicking `ClipVault.exe`
+at the folder root; the app body and its dependencies live in the `ClipVault/app/` subfolder.
+
 ## 1. Verify the checksums
 
 ```bash
@@ -25,8 +28,8 @@ All listed files must report `OK`.
 
 ## 2. Verify build provenance (SLSA)
 
-Provenance is bound to both the distributed `.zip` and the `ClipVault.App.exe` inside it. Verify the artifact
-you actually downloaded:
+Provenance is bound to the distributed `.zip`, the root launcher `ClipVault.exe`, and the
+`app/ClipVault.App.exe` body inside it. Verify the artifact you actually downloaded:
 
 ```bash
 gh attestation verify ClipVault-<version>-win-x64.zip --repo P4suta/clipvault
@@ -40,10 +43,11 @@ gh attestation verify ClipVault-<version>-win-x64.zip \
   --signer-workflow P4suta/clipvault/.github/workflows/release.yml
 ```
 
-You can also verify the unpacked executable directly:
+You can also verify an unpacked executable directly — the root launcher or the app body:
 
 ```bash
-gh attestation verify ClipVault.App.exe --repo P4suta/clipvault
+gh attestation verify ClipVault.exe --repo P4suta/clipvault
+gh attestation verify app/ClipVault.App.exe --repo P4suta/clipvault
 ```
 
 A successful run prints the verified provenance predicate (the workflow, commit, and runner that built it).
@@ -66,7 +70,7 @@ crossgen (ReadyToRun) and bundles the .NET/Windows App SDK runtime, which vary b
 The CycloneDX SBOM is attested against the binary's digest:
 
 ```bash
-gh attestation verify ClipVault.App.exe \
+gh attestation verify app/ClipVault.App.exe \
   --repo P4suta/clipvault \
   --predicate-type https://cyclonedx.org/bom
 ```
@@ -76,11 +80,12 @@ CycloneDX-aware tool, or scan it for known vulnerabilities (e.g. `grype sbom:cli
 
 ## 4. (After code signing) Verify the Authenticode signature
 
-Once releases are signed with the SSL.com certificate, the `.exe` will additionally carry an Authenticode
-signature with an RFC-3161 timestamp. On Windows:
+Once releases are signed with the SSL.com certificate, both the launcher and the app body will
+additionally carry an Authenticode signature with an RFC-3161 timestamp. On Windows:
 
 ```powershell
-signtool verify /pa /v ClipVault.App.exe
+signtool verify /pa /v ClipVault.exe
+signtool verify /pa /v app\ClipVault.App.exe
 ```
 
 Until then, the binary is intentionally unsigned and Windows SmartScreen may warn on first run; the provenance

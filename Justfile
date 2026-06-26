@@ -15,6 +15,8 @@ app_ui_tests := "tests/ClipVault.App.Tests/ClipVault.App.Tests.csproj"
 coverage_dir := "artifacts/coverage"
 runsettings := "coverlet.runsettings"
 publish_dir := "artifacts/publish/win-x64"
+launcher_dir := "artifacts/launcher"
+bundle_dir := "artifacts/publish/ClipVault"
 
 # List recipes.
 default:
@@ -266,12 +268,27 @@ coverage-check: coverage
 # ---------------------------------------------------------------------------
 
 # -o pins a deterministic output path (the publish profile's PublishDir otherwise lands under
-# src/.../bin and hardcodes the TFM).
+# src/.../bin and hardcodes the TFM). The output is assembled into a tidy ClipVault/ bundle so the
+# extracted folder has one obvious entry point (ClipVault.exe) instead of a wall of DLLs.
 
-# Self-contained, install-free distribution.
+# Self-contained, install-free distribution assembled into a ClipVault/ bundle (launcher + app/).
 publish: stop
+    #!/usr/bin/env bash
+    set -euo pipefail
     {{dotnet}} publish {{app}} -c Release -p:Platform=x64 --self-contained -o {{publish_dir}}
-    @echo "Output: {{publish_dir}}/ClipVault.App.exe"
+    # Root launcher (ClipVault.exe). No-op when the MSVC C++ tools are absent on a .NET-only box.
+    powershell -NoProfile -ExecutionPolicy Bypass -File launcher/build.ps1 -OutputPath "{{launcher_dir}}/ClipVault.exe" -SkipIfMissingToolchain
+    # Assemble: app/ holds the published app + dependencies; the launcher and readme sit at the root.
+    rm -rf "{{bundle_dir}}"
+    mkdir -p "{{bundle_dir}}/app"
+    cp -r "{{publish_dir}}/." "{{bundle_dir}}/app/"
+    cp launcher/dist-README.txt "{{bundle_dir}}/README.txt"
+    if [ -f "{{launcher_dir}}/ClipVault.exe" ]; then
+      cp "{{launcher_dir}}/ClipVault.exe" "{{bundle_dir}}/ClipVault.exe"
+      echo "Output: {{bundle_dir}}/ClipVault.exe"
+    else
+      echo "Output: {{bundle_dir}}/app/ClipVault.App.exe (root launcher skipped: MSVC C++ tools absent)"
+    fi
 
 # Pass a version to stamp it: `just sbom 1.2.3` (defaults to 0.0.0). Spec 1.6 for broad tooling support.
 
@@ -284,29 +301,33 @@ sbom version="0.0.0":
 # Production releases are signed by SSL.com eSigner (cloud HSM) in the release workflow; this recipe
 # covers local/PFX-based signing and reuses signtool from the pinned SDK BuildTools package.
 
-# Authenticode-sign the published exe IF a PFX is configured via env (no-op otherwise, safe to chain).
+# Authenticode-sign the bundled exes IF a PFX is configured via env (no-op otherwise, safe to chain).
+# Signs both the app body (app/ClipVault.App.exe) and the root launcher (ClipVault.exe).
 sign:
     #!/usr/bin/env bash
     set -euo pipefail
     export MSYS_NO_PATHCONV=1   # keep signtool's /flags from being mangled into paths by Git Bash
-    exe="{{publish_dir}}/ClipVault.App.exe"
     if [ -z "${CLIPVAULT_PFX:-}" ]; then
-      echo "No signing cert configured (CLIPVAULT_PFX unset); leaving the binary unsigned."
+      echo "No signing cert configured (CLIPVAULT_PFX unset); leaving the binaries unsigned."
       exit 0
     fi
     signtool=$(find "$HOME/.nuget/packages/microsoft.windows.sdk.buildtools" -iname signtool.exe -path '*/x64/*' 2>/dev/null | sort | tail -1)
     [ -n "$signtool" ] || { echo "signtool.exe not found in restored SDK BuildTools"; exit 1; }
-    "$signtool" sign /fd SHA256 /f "$CLIPVAULT_PFX" /p "${CLIPVAULT_PFX_PASSWORD:-}" /tr http://timestamp.digicert.com /td SHA256 "$exe"
-    "$signtool" verify /pa /v "$exe"
+    for exe in "{{bundle_dir}}/app/ClipVault.App.exe" "{{bundle_dir}}/ClipVault.exe"; do
+      [ -f "$exe" ] || { echo "skip (not present): $exe"; continue; }
+      "$signtool" sign /fd SHA256 /f "$CLIPVAULT_PFX" /p "${CLIPVAULT_PFX_PASSWORD:-}" /tr http://timestamp.digicert.com /td SHA256 "$exe"
+      "$signtool" verify /pa /v "$exe"
+    done
 
 # Mirrors the CI release pipeline so a release can be reproduced locally before tagging. Pass a
-# version: `just publish-release 1.2.3`.
+# version: `just publish-release 1.2.3`. Building the root launcher needs the VS C++ tools; without
+# them the launcher is skipped (CI is authoritative) and the bundle ships app/ only.
 
 # Local dry-run of a release: publish + SBOM + (optional) sign.
 publish-release version="0.0.0": (sbom version)
     just publish
     just sign
-    @echo "Local release staged: {{publish_dir}}/ + artifacts/sbom/clipvault.cdx.json"
+    @echo "Local release staged: {{bundle_dir}}/ + artifacts/sbom/clipvault.cdx.json"
 
 # ---------------------------------------------------------------------------
 # Aggregate gates

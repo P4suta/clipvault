@@ -81,17 +81,27 @@ jobs:
             -p:Version=${{ steps.ver.outputs.version }} \
             -o artifacts/publish/win-x64
 
+      # The native root launcher (ClipVault.exe) shipped at the bundle root. Built with the MSVC C++
+      # tools present on the windows runner (located via vswhere); no third-party action needed. The
+      # bundle readme is staged alongside it so both travel to the publish job (which has no checkout).
+      - name: Build root launcher (x64)
+        shell: pwsh
+        run: |
+          ./launcher/build.ps1 -OutputPath artifacts/launcher/ClipVault.exe -Version ${{ steps.ver.outputs.version }}
+          Copy-Item launcher/dist-README.txt artifacts/launcher/README.txt
+
       - name: Generate SBOM
         run: mise exec -- just sbom ${{ steps.ver.outputs.version }}
 
-      # Hand the unsigned publish output + SBOM to the sign job. Zips/checksums are intentionally NOT
-      # created here: they must be staged from the SIGNED binary (in publish) so they always match.
+      # Hand the unsigned publish output + launcher + SBOM to the sign job. Zips/checksums are
+      # intentionally NOT created here: they must be staged from the SIGNED binaries so they match.
       - name: Upload build output
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: build-output
           path: |
             artifacts/publish/win-x64/
+            artifacts/launcher/
             artifacts/sbom/clipvault.cdx.json
           if-no-files-found: error
           retention-days: 1
@@ -120,7 +130,7 @@ jobs:
       # Dormant until the SSL.com eSigner secrets exist in the `release` environment. Signs in place so
       # the staged zip and the attestation subjects in publish are the SIGNED binary. environment_name
       # is the eSigner CA environment (PROD = real cert).
-      - name: Code sign (SSL.com eSigner)
+      - name: Code sign app body (SSL.com eSigner)
         if: ${{ env.HAVE_SIGNING == 'true' }}
         uses: sslcom/esigner-codesign@cf5f6c1d38ad10f47e3ed9aca873f429b1a8d85b # v1.3.2
         with:
@@ -130,6 +140,22 @@ jobs:
           credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
           totp_secret: ${{ secrets.ES_TOTP_SECRET }}
           file_path: ${{ github.workspace }}/artifacts/publish/win-x64/ClipVault.App.exe
+          override: "true"
+          malware_block: "false"
+          environment_name: "PROD"
+
+      # The root launcher is what users double-click first, so SmartScreen evaluates it too: sign it
+      # with the same cert as the app body.
+      - name: Code sign launcher (SSL.com eSigner)
+        if: ${{ env.HAVE_SIGNING == 'true' }}
+        uses: sslcom/esigner-codesign@cf5f6c1d38ad10f47e3ed9aca873f429b1a8d85b # v1.3.2
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: ${{ github.workspace }}/artifacts/launcher/ClipVault.exe
           override: "true"
           malware_block: "false"
           environment_name: "PROD"
@@ -149,7 +175,10 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $exe = "artifacts/publish/win-x64/ClipVault.App.exe"
+          $exes = @(
+            "artifacts/publish/win-x64/ClipVault.App.exe",
+            "artifacts/launcher/ClipVault.exe"
+          )
 
           $signtool = Get-ChildItem "C:/Program Files (x86)/Windows Kits/10/bin/*/x64/signtool.exe" -ErrorAction SilentlyContinue |
             Sort-Object FullName | Select-Object -Last 1
@@ -157,17 +186,19 @@ jobs:
             throw "signtool.exe not found in the Windows SDK on the runner"
           }
 
-          # /pa = default authenticode policy, /tw = require a timestamp (warning -> error via exit code).
-          & $signtool.FullName verify /pa /tw /v $exe
-          if ($LASTEXITCODE -ne 0) { throw "signtool verify failed (exit $LASTEXITCODE): chain or timestamp invalid" }
+          foreach ($exe in $exes) {
+            # /pa = default authenticode policy, /tw = require a timestamp (warning -> error via exit code).
+            & $signtool.FullName verify /pa /tw /v $exe
+            if ($LASTEXITCODE -ne 0) { throw "signtool verify failed for $exe (exit $LASTEXITCODE): chain or timestamp invalid" }
 
-          $sig = Get-AuthenticodeSignature $exe
-          if ($sig.Status -ne "Valid") { throw "signature status is $($sig.Status), expected Valid" }
-          $subject = $sig.SignerCertificate.Subject
-          if ($subject -notlike "*$env:SIGNER_SUBJECT_CONTAINS*") {
-            throw "unexpected signer subject: $subject (expected to contain $env:SIGNER_SUBJECT_CONTAINS)"
+            $sig = Get-AuthenticodeSignature $exe
+            if ($sig.Status -ne "Valid") { throw "signature status for $exe is $($sig.Status), expected Valid" }
+            $subject = $sig.SignerCertificate.Subject
+            if ($subject -notlike "*$env:SIGNER_SUBJECT_CONTAINS*") {
+              throw "unexpected signer subject for $exe`: $subject (expected to contain $env:SIGNER_SUBJECT_CONTAINS)"
+            }
+            Write-Host "Authenticode signature verified: $exe -> $subject"
           }
-          Write-Host "Authenticode signature verified: $subject"
 
       - name: Upload signed output
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -175,6 +206,7 @@ jobs:
           name: signed-output
           path: |
             artifacts/publish/win-x64/
+            artifacts/launcher/
             artifacts/sbom/clipvault.cdx.json
           if-no-files-found: error
           retention-days: 1
@@ -207,20 +239,30 @@ jobs:
           set -euo pipefail
           v="${{ steps.ver.outputs.version }}"
           out="artifacts/publish/win-x64"
-          mkdir -p artifacts/release
-          # Runtime zip (everything except PDBs) and a separate symbols zip.
-          ( cd "$out" && 7z a -tzip '-x!*.pdb' "$GITHUB_WORKSPACE/artifacts/release/ClipVault-$v-win-x64.zip" . >/dev/null )
+          bundle="artifacts/bundle/ClipVault"
+          mkdir -p artifacts/release "$bundle/app"
+          # Assemble the distributable bundle: the signed app + dependencies under app/, with the
+          # signed launcher and a readme at the root, so the zip extracts to one ClipVault/ folder
+          # whose single obvious entry point is ClipVault.exe.
+          cp -r "$out/." "$bundle/app/"
+          cp artifacts/launcher/ClipVault.exe "$bundle/ClipVault.exe"
+          cp artifacts/launcher/README.txt "$bundle/README.txt"
+          # Runtime zip: the whole ClipVault/ folder minus PDBs; symbols zip: the app PDBs only.
+          # -xr! (recursive) is required because the PDBs are now nested under ClipVault/app/.
+          ( cd artifacts/bundle && 7z a -tzip '-xr!*.pdb' "$GITHUB_WORKSPACE/artifacts/release/ClipVault-$v-win-x64.zip" ClipVault >/dev/null )
           ( cd "$out" && 7z a -tzip "$GITHUB_WORKSPACE/artifacts/release/ClipVault-$v-win-x64-symbols.zip" '*.pdb' >/dev/null )
           cp artifacts/sbom/clipvault.cdx.json artifacts/release/
           ( cd artifacts/release && sha256sum -- * > SHA256SUMS.txt )
           echo "Staged:"; ls -la artifacts/release
 
-      # SLSA build provenance, bound to the signed exe and both distributed zips (runtime + symbols).
+      # SLSA build provenance, bound to both signed exes (app body + launcher) and both distributed
+      # zips (runtime + symbols).
       - name: Attest build provenance
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
           subject-path: |
             artifacts/publish/win-x64/ClipVault.App.exe
+            artifacts/launcher/ClipVault.exe
             artifacts/release/ClipVault-${{ steps.ver.outputs.version }}-win-x64.zip
             artifacts/release/ClipVault-${{ steps.ver.outputs.version }}-win-x64-symbols.zip
 
