@@ -127,6 +127,7 @@ public partial class App : Application, IDisposable
         {
             // Type + message only (never the full exception).
             Debug.WriteLine($"[ClipVault] Startup failed: {ex.GetType().Name}: {ex.Message}");
+            LogFatal("Startup", ex);
             await ExitAsync();
         }
     }
@@ -147,13 +148,53 @@ public partial class App : Application, IDisposable
         _trayController = null;
     }
 
-    private static void OnUnhandledException(object sender, System.UnhandledExceptionEventArgs e) =>
+    private static void OnUnhandledException(object sender, System.UnhandledExceptionEventArgs e)
+    {
         Debug.WriteLine($"[ClipVault] Fatal: {(e.ExceptionObject as Exception)?.GetType().Name ?? "unknown"}");
+        if (e.ExceptionObject is Exception ex)
+        {
+            LogFatal("Unhandled", ex);
+        }
+    }
 
     private static void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
     {
         e.SetObserved();
         Debug.WriteLine($"[ClipVault] Unobserved task exception: {e.Exception.GetType().Name}");
+        LogFatal("UnobservedTask", e.Exception);
+    }
+
+    /// <summary>
+    /// Best-effort append of a fatal/startup exception to %LOCALAPPDATA%\ClipVault\crash.log so that a
+    /// released (non-debugger) build leaves a diagnosable trace instead of silently vanishing. Records only
+    /// the exception type, message, and stack — never clipboard content (no plaintext is ever written here).
+    /// Never throws: a logging failure must not turn into a second crash on the startup path.
+    /// </summary>
+    /// <param name="context">A short label for where the failure originated (e.g. "Startup").</param>
+    /// <param name="ex">The exception to record.</param>
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Best-effort diagnostics: a logging failure must never crash the startup path.")]
+    private static void LogFatal(string context, Exception ex)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(JsonSettingsService.DefaultPath());
+            if (string.IsNullOrEmpty(dir))
+            {
+                return;
+            }
+
+            Directory.CreateDirectory(dir);
+            var stamp = DateTimeOffset.Now.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
+            var entry = $"[{stamp}] {context}: {ex.GetType().FullName}: {ex.Message}{Environment.NewLine}{ex}{Environment.NewLine}{Environment.NewLine}";
+            File.AppendAllText(Path.Combine(dir, "crash.log"), entry);
+        }
+        catch
+        {
+            // Diagnostics are best-effort; swallow any IO/permission failure.
+        }
     }
 
     /// <summary>
