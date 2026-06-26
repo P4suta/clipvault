@@ -4,7 +4,7 @@ A tiny native `ClipVault.exe` that sits at the root of the distributed bundle an
 app under `app\`. It exists only to give the extracted folder one obvious entry point instead of a
 wall of DLLs:
 
-```
+```text
 ClipVault/
 ├─ ClipVault.exe      # this launcher
 ├─ README.txt
