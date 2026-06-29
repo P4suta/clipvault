@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using ClipVault.Application.Abstractions;
 using ClipVault.Application.Clipboard;
+using ClipVault.Infrastructure.Diagnostics;
 using ClipVault.Infrastructure.Persistence;
 using ClipVault.Infrastructure.Security;
 using ClipVault.Infrastructure.Settings;
@@ -188,7 +189,7 @@ public partial class App : Application, IDisposable
 
             Directory.CreateDirectory(dir);
             var stamp = DateTimeOffset.Now.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
-            var entry = $"[{stamp}] {context}: {ex.GetType().FullName}: {ex.Message}{Environment.NewLine}{ex}{Environment.NewLine}{Environment.NewLine}";
+            var entry = $"[{stamp}] {BuildInfo.ProductAndVersion} {context}: {ex.GetType().FullName}: {ex.Message}{Environment.NewLine}{ex}{Environment.NewLine}{Environment.NewLine}";
             File.AppendAllText(Path.Combine(dir, "crash.log"), entry);
         }
         catch

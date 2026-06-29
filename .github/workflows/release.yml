@@ -72,13 +72,14 @@ jobs:
       - name: Restore (locked)
         run: mise exec -- just restore-locked
 
-      # Self-contained x64 publish with the version injected from the tag.
+      # Self-contained x64 publish with the version injected from the tag. Channel=stable suppresses the
+      # default '-dev' suffix, so the InformationalVersion is a clean X.Y.Z and data lands in the stable root.
       - name: Publish self-contained (x64)
         shell: bash
         run: |
           mise exec -- dotnet publish src/ClipVault.App/ClipVault.App.csproj \
             -c Release -p:Platform=x64 --self-contained -p:RestoreLockedMode=true \
-            -p:Version=${{ steps.ver.outputs.version }} \
+            -p:Version=${{ steps.ver.outputs.version }} -p:Channel=stable \
             -o artifacts/publish/win-x64
 
       # The native root launcher (ClipVault.exe) shipped at the bundle root. Built with the MSVC C++
@@ -295,12 +296,24 @@ jobs:
           done
           echo "ERROR: attestations did not verify."; exit 1
 
-      - name: Create GitHub Release
+      # release-please creates the tag + Release (with Conventional-Commit notes) when its Release PR
+      # merges, then this tag-triggered run attaches the signed assets to it. Wait briefly for that
+      # release to appear, then upload. Fall back to creating the release for manual/tag-only runs that
+      # did not originate from release-please (e.g. a hand-pushed tag).
+      - name: Attach assets to the GitHub Release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          for i in 1 2 3 4 5; do
+            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber artifacts/release/*
+              exit 0
+            fi
+            echo "Release $TAG not present yet (attempt $i); waiting..."; sleep 15
+          done
+          echo "No release for $TAG after waiting; creating one (non-release-please path)."
           gh release create "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --title "ClipVault ${{ steps.ver.outputs.version }}" \

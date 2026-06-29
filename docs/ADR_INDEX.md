@@ -14,6 +14,7 @@ that links back.
 | [0005](./adr/0005-volatile-mode-and-capture-privacy-gate.md) | Volatile mode and capture gate    | accepted |
 | [0006](./adr/0006-win-v-via-low-level-keyboard-hook.md)      | Win+V via low-level keyboard hook | accepted |
 | [0007](./adr/0007-custom-json-localization.md)               | Custom JSON localization          | accepted |
+| [0008](./adr/0008-build-channels-and-release-please.md)      | Build channels & release-please   | accepted |
 
 ## Authoring a new ADR
 

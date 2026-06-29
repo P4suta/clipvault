@@ -11,7 +11,9 @@ namespace ClipVault.Infrastructure.Security;
 /// </summary>
 public sealed class WindowsHelloService : IWindowsHello
 {
-    private const string CredentialName = "ClipVault";
+    // Channel-qualified off stable (e.g. "ClipVault (nightly)") so a nightly/dev build uses its own
+    // Windows Hello credential rather than sharing the released build's.
+    private static readonly string CredentialName = AppPaths.QualifiedName("ClipVault");
 
     /// <inheritdoc/>
     public async Task<bool> IsAvailableAsync() => await KeyCredentialManager.IsSupportedAsync();

@@ -29,11 +29,11 @@ public sealed class JsonSettingsService : ISettingsService
     public ClipVaultSettings Current => _current;
 
     /// <summary>
-    /// Gets the default settings file path under %LOCALAPPDATA%\ClipVault.
+    /// Gets the default settings file path under the per-channel %LOCALAPPDATA%\ClipVault root
+    /// (see <see cref="AppPaths.LocalAppDataRoot"/>).
     /// </summary>
     /// <returns>The default settings file path.</returns>
-    public static string DefaultPath() => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClipVault", "settings.json");
+    public static string DefaultPath() => Path.Combine(AppPaths.LocalAppDataRoot(), "settings.json");
 
     /// <summary>
     /// Loads the settings from a file, falling back to the defaults when the file is missing or corrupt.

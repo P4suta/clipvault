@@ -1,0 +1,32 @@
+# Release-PR approval gate. release-please opens the Release PR automatically; this required check keeps
+# it unmergeable until a human adds the `release: approved` label, so a release is never a one-click
+# accident. It runs on every PR but only enforces the label on the release-please PR — for any other PR
+# it passes immediately, so it can be a required status check without blocking normal work.
+name: release-gate
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+
+permissions: {}
+
+jobs:
+  release-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the release:approved label on the release PR
+        shell: bash
+        env:
+          IS_RELEASE_PR: ${{ contains(github.head_ref, 'release-please') }}
+          HAS_LABEL: "${{ contains(github.event.pull_request.labels.*.name, 'release: approved') }}"
+        run: |
+          if [ "$IS_RELEASE_PR" != "true" ]; then
+            echo "Not a release-please PR; gate passes."
+            exit 0
+          fi
+          if [ "$HAS_LABEL" = "true" ]; then
+            echo "'release: approved' present; gate passes."
+            exit 0
+          fi
+          echo "::error::The release PR needs the 'release: approved' label before it can merge."
+          exit 1

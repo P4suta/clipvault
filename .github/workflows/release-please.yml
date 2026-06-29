@@ -1,0 +1,44 @@
+# Automated versioning. release-please reads Conventional Commits on main and maintains an open Release
+# PR that bumps the version (Directory.Build.props via the x-release-please-version marker + the manifest)
+# and the changelog. Merging that PR creates the v<X.Y.Z> tag and a GitHub Release; the tag then triggers
+# release.yml, which builds, signs, attests, and uploads the assets onto that release.
+#
+# A GitHub App token (not GITHUB_TOKEN) is required so the tag push it creates is allowed to trigger
+# release.yml — events from the default token never start further workflow runs. The App credentials
+# are scoped to the `release-please` environment (no required reviewers — this runs on every push to
+# main; the environment is just the secret boundary, restricted to the main branch).
+name: release-please
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    # Scopes the App credentials: RELEASE_PLEASE_APP_ID / RELEASE_PLEASE_APP_PRIVATE_KEY live as
+    # environment secrets here, not repo-wide.
+    environment: release-please
+    permissions:
+      contents: write # create the tag, the release, and push the Release PR branch
+      pull-requests: write # open and update the Release PR
+    steps:
+      # Mint a short-lived token for the dedicated release-please GitHub App so its tag/release events
+      # can trigger release.yml. App credentials live as repo secrets.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          app-id: ${{ secrets.RELEASE_PLEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

@@ -105,6 +105,8 @@
   "Settings.Panic.Dialog.Body": "This erases all history and destroys the master key (crypto-erase). The action cannot be undone, all stored ciphertext becomes permanently unrecoverable, and the app exits when it completes.",
   "Settings.Panic.Dialog.Confirm": "Erase and exit",
 
+  "Settings.About.Header": "Version",
+
   "Settings.Privacy.Status": "Current status",
   "Settings.Privacy.Storage": "Storage",
   "Settings.Privacy.Encryption": "Encryption",
