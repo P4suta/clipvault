@@ -17,6 +17,12 @@ though the binary is not yet Authenticode code-signed*. This is the project's cu
 The application zip extracts to a single `ClipVault/` folder. Run it by double-clicking `ClipVault.exe`
 at the folder root; the app body and its dependencies live in the `ClipVault/app/` subfolder.
 
+> **Releases vs nightlies.** This page covers tagged **stable** releases (version `X.Y.Z`). **Nightly**
+> builds (`X.Y.Z-nightly.<date>`) are unsigned testing builds published as short-lived GitHub Actions
+> artifacts, not Releases, and carry no provenance/SBOM attestations — do not treat them as releases. A
+> nightly keeps its data separate (`%LOCALAPPDATA%\ClipVault\nightly`). See
+> [ADR-0008](adr/0008-build-channels-and-release-please.md).
+
 ## 1. Verify the checksums
 
 ```bash

@@ -42,6 +42,21 @@ The daily subset. `just` lists everything; see the [Justfile](../Justfile) for t
 | `analyze`              | Build every project with warnings-as-errors (the heavy gate).        |
 | `doctor`               | Environment health check.                                            |
 
+## Build channels
+
+Every build carries a channel (`dev` / `nightly` / `stable`) stamped into
+`InformationalVersion` and shown in Settings and `crash.log`. See
+[ADR-0008](adr/0008-build-channels-and-release-please.md).
+
+- **dev** — the default for `just build` / `just run`: `X.Y.Z-dev+<sha>`. Isolated data
+  under `%LOCALAPPDATA%\ClipVault\dev`, so a dev build never touches your real history.
+- **nightly** — `nightly.yml` (daily / manual), unsigned, a 14-day Actions artifact.
+  Data under `...\ClipVault\nightly`. Fetch: `gh run download -n clipvault-nightly`.
+- **stable** — tagged releases (`X.Y.Z`, no suffix), data under `...\ClipVault`.
+
+Versions are not hand-edited: release-please bumps `<Version>` in `Directory.Build.props`
+from Conventional Commits. `just version [channel]` prints the canonical version string.
+
 ## Notes
 
 - A tray-resident instance locks `ClipVault.App.exe`; `just run` / `just stop` (and the VS Code
