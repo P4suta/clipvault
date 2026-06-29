@@ -43,8 +43,10 @@ Adopt three build channels stamped at compile time, plus release-please for vers
   `main`; the environment is the secret boundary, restricted to the `main` branch).
 - Branch protection on `main` is enforced via a repository **ruleset** (`main protection`), not the
   legacy branch-protection rules.
-- Recommended repo hardening (settings, out of band): require a `release: approved` label
-  check on the Release PR, and restrict `v*.*.*` tag creation to the release-please App.
+- A required `release-gate` check (`.github/workflows/release-gate.yml`) keeps the Release PR
+  unmergeable until the `release: approved` label is applied; it passes immediately on non-release PRs.
+- A tag **ruleset** restricts `v*` tag create/update/delete to the release-please GitHub App (its
+  Integration ID is the sole bypass actor), so only an approved release can mint a release tag.
 
 ## Alternatives considered
 
