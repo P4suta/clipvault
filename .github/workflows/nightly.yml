@@ -1,0 +1,89 @@
+# Nightly build: an UNSIGNED, channel-stamped bundle from main, published as a 14-day GitHub Actions
+# artifact (NOT a Release) so nightlies stay off the Releases list and out of the immutable-release flow.
+# The approval-gated signing pipeline is stable-only (see release.yml); nightly testers accept the
+# SmartScreen warning. A nightly build isolates its own data under %LOCALAPPDATA%\ClipVault\nightly.
+name: nightly
+
+on:
+  schedule:
+    - cron: "47 16 * * *" # 01:47 JST daily
+  workflow_dispatch: {}
+
+# Deny by default; the single job only reads the repo (upload-artifact uses the runtime token).
+permissions: {}
+
+concurrency:
+  group: nightly
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      # Scheduled runs skip when main has not changed in the last 24h (no point reshipping an identical
+      # nightly). Manual runs always build.
+      - name: Decide whether to build
+        id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          elif [ "$(( $(date -u +%s) - $(git log -1 --format=%ct) ))" -lt 86400 ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            echo "main unchanged in the last 24h; skipping nightly."
+          fi
+
+      - name: Compute nightly channel
+        if: steps.gate.outputs.build == 'true'
+        id: chan
+        shell: bash
+        run: |
+          set -euo pipefail
+          date="$(date -u +%Y%m%d)"
+          echo "channel=nightly.$date" >> "$GITHUB_OUTPUT"
+
+      - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        if: steps.gate.outputs.build == 'true'
+        with:
+          install: true
+          cache: true
+
+      - name: Restore (locked)
+        if: steps.gate.outputs.build == 'true'
+        run: mise exec -- just restore-locked
+
+      # Build the unsigned ClipVault/ bundle stamped with the nightly channel (app body + launcher).
+      - name: Publish nightly bundle
+        if: steps.gate.outputs.build == 'true'
+        run: mise exec -- just publish ${{ steps.chan.outputs.channel }}
+
+      # Zip the bundle (minus PDBs) and checksum it, mirroring the release asset shape.
+      - name: Stage nightly artifact
+        if: steps.gate.outputs.build == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          v="$(mise exec -- just version ${{ steps.chan.outputs.channel }})"
+          mkdir -p artifacts/release
+          ( cd artifacts/publish && 7z a -tzip '-xr!*.pdb' \
+              "$GITHUB_WORKSPACE/artifacts/release/ClipVault-$v-win-x64.zip" ClipVault >/dev/null )
+          ( cd artifacts/release && sha256sum -- * > SHA256SUMS.txt )
+          ls -la artifacts/release
+
+      - name: Upload nightly artifact
+        if: steps.gate.outputs.build == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: clipvault-nightly
+          path: artifacts/release/
+          if-no-files-found: error
+          retention-days: 14
