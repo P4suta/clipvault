@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Windows.Input;
+using ClipVault.Infrastructure.Diagnostics;
 using ClipVaultApp.ViewModels;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Windowing;
@@ -59,6 +60,9 @@ public sealed partial class SettingsWindow : Window
 
     /// <summary>Gets the command used by each row's "delete" button in the exclusion list.</summary>
     public static ICommand? RemoveExcludedAppCommand => _sharedViewModel?.RemoveExcludedAppCommand;
+
+    /// <summary>Gets the full build version and channel for the About row (e.g. <c>0.1.0-dev+abc1234</c>).</summary>
+    public static string AppVersionDisplay => BuildInfo.Display;
 
     /// <summary>Gets the settings ViewModel that backs this window.</summary>
     public SettingsViewModel ViewModel { get; }

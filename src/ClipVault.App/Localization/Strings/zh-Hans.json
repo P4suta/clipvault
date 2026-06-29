@@ -105,6 +105,8 @@
   "Settings.Panic.Dialog.Body": "将清除全部历史并销毁主密钥（密码学擦除）。此操作无法撤销，所有已存储的密文都将永久无法恢复，完成后应用将退出。",
   "Settings.Panic.Dialog.Confirm": "清除并退出",
 
+  "Settings.About.Header": "版本",
+
   "Settings.Privacy.Status": "当前状态",
   "Settings.Privacy.Storage": "存储方式",
   "Settings.Privacy.Encryption": "加密保护",

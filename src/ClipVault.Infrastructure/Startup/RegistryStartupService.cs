@@ -10,7 +10,10 @@ namespace ClipVault.Infrastructure.Startup;
 public sealed class RegistryStartupService : IStartupService
 {
     private const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    private const string ValueName = "ClipVault";
+
+    // Channel-qualified off stable (e.g. "ClipVault (nightly)") so a nightly/dev build's startup
+    // registration never overwrites or removes the released build's.
+    private static readonly string ValueName = AppPaths.QualifiedName("ClipVault");
 
     /// <inheritdoc/>
     public bool IsEnabled()

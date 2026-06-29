@@ -267,17 +267,34 @@ coverage-check: coverage
 # Publish, sign, SBOM
 # ---------------------------------------------------------------------------
 
+# The base X.Y.Z, read from the single in-repo source of truth (release-please bumps it).
+base-version:
+    @sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -1
+
+# The canonical full version string for a channel label. This is the one place the format is defined:
+# stable -> X.Y.Z, dev -> X.Y.Z-dev, nightly -> X.Y.Z-nightly.<date> (Source Link adds +<sha> at build).
+# `just version`            -> 0.1.0-dev
+# `just version nightly.20260630` -> 0.1.0-nightly.20260630
+# `just version stable`     -> 0.1.0
+version channel="dev":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    base=$(just base-version)
+    if [ "{{channel}}" = "stable" ]; then echo "$base"; else echo "$base-{{channel}}"; fi
+
 # -o pins a deterministic output path (the publish profile's PublishDir otherwise lands under
 # src/.../bin and hardcodes the TFM). The output is assembled into a tidy ClipVault/ bundle so the
 # extracted folder has one obvious entry point (ClipVault.exe) instead of a wall of DLLs.
 
 # Self-contained, install-free distribution assembled into a ClipVault/ bundle (launcher + app/).
-publish: stop
+# Pass a channel label to stamp the version: `just publish stable` / `just publish nightly.20260630`.
+publish channel="dev": stop
     #!/usr/bin/env bash
     set -euo pipefail
-    {{dotnet}} publish {{app}} -c Release -p:Platform=x64 --self-contained -o {{publish_dir}}
+    ver=$(just version {{channel}})
+    {{dotnet}} publish {{app}} -c Release -p:Platform=x64 --self-contained -p:Channel={{channel}} -o {{publish_dir}}
     # Root launcher (ClipVault.exe). No-op when the MSVC C++ tools are absent on a .NET-only box.
-    powershell -NoProfile -ExecutionPolicy Bypass -File launcher/build.ps1 -OutputPath "{{launcher_dir}}/ClipVault.exe" -SkipIfMissingToolchain
+    powershell -NoProfile -ExecutionPolicy Bypass -File launcher/build.ps1 -OutputPath "{{launcher_dir}}/ClipVault.exe" -Version "$ver" -SkipIfMissingToolchain
     # Assemble: app/ holds the published app + dependencies; the launcher and readme sit at the root.
     rm -rf "{{bundle_dir}}"
     mkdir -p "{{bundle_dir}}/app"
@@ -325,7 +342,7 @@ sign:
 
 # Local dry-run of a release: publish + SBOM + (optional) sign.
 publish-release version="0.0.0": (sbom version)
-    just publish
+    just publish stable
     just sign
     @echo "Local release staged: {{bundle_dir}}/ + artifacts/sbom/clipvault.cdx.json"
 

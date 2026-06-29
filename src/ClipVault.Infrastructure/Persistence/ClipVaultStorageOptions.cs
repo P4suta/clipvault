@@ -23,13 +23,13 @@ public sealed record ClipVaultStorageOptions
     public required string KeyFilePath { get; init; }
 
     /// <summary>
-    /// Creates the default configuration that uses a folder under %LOCALAPPDATA%\ClipVault.
+    /// Creates the default configuration that uses the per-channel folder under %LOCALAPPDATA%\ClipVault
+    /// (see <see cref="AppPaths.LocalAppDataRoot"/>), so non-stable builds never touch the released data.
     /// </summary>
     /// <returns>The default storage options.</returns>
     public static ClipVaultStorageOptions Default()
     {
-        var dir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClipVault");
+        var dir = AppPaths.LocalAppDataRoot();
         return new ClipVaultStorageOptions
         {
             DatabasePath = Path.Combine(dir, "history.db"),

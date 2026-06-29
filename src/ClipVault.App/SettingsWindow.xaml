@@ -392,6 +392,17 @@
                                 </StackPanel>
                             </Button>
                         </controls:SettingsCard>
+
+                        <!--  About (build version + channel)  -->
+                        <controls:SettingsCard
+                            Header="{loc:Str Key=Settings.About.Header}"
+                            HeaderIcon="{ui:FontIcon Glyph=&#xE946;}">
+                            <TextBlock
+                                AutomationProperties.AutomationId="AboutVersionDisplay"
+                                IsTextSelectionEnabled="True"
+                                Style="{StaticResource BodyStrongTextBlockStyle}"
+                                Text="{x:Bind local:SettingsWindow.AppVersionDisplay}" />
+                        </controls:SettingsCard>
                     </StackPanel>
                 </ScrollViewer>
 

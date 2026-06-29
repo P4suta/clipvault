@@ -16,6 +16,17 @@
     <UseArtifactsOutput>true</UseArtifactsOutput>
   </PropertyGroup>
 
+  <!-- Build channel and version. The base X.Y.Z is the single in-repo source of truth (release-please
+       bumps it via the x-release-please-version marker). The Channel property (default 'dev', overridden
+       to 'nightly.<date>' or 'stable' by CI) decides the InformationalVersion suffix; Source Link appends
+       the commit SHA (+<sha>) automatically. dev -> X.Y.Z-dev, nightly -> X.Y.Z-nightly.<date>, stable -> X.Y.Z. -->
+  <PropertyGroup Label="Build channel">
+    <Version>0.1.0</Version> <!-- x-release-please-version -->
+    <Channel Condition="'$(Channel)' == ''">dev</Channel>
+    <InformationalVersion Condition="'$(Channel)' != 'stable'">$(Version)-$(Channel)</InformationalVersion>
+    <InformationalVersion Condition="'$(Channel)' == 'stable'">$(Version)</InformationalVersion>
+  </PropertyGroup>
+
   <!-- Project/assembly metadata (flows into the published .exe file properties). -->
   <PropertyGroup Label="Package metadata">
     <Product>ClipVault</Product>

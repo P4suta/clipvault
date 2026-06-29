@@ -105,6 +105,8 @@
   "Settings.Panic.Dialog.Body": "全履歴を消去し、マスター鍵を破棄します（暗号消去）。この操作は取り消せません。保存済みの暗号文はすべて復元不能になり、完了後にアプリは終了します。",
   "Settings.Panic.Dialog.Confirm": "消去して終了",
 
+  "Settings.About.Header": "バージョン",
+
   "Settings.Privacy.Status": "現在の状態",
   "Settings.Privacy.Storage": "保存方式",
   "Settings.Privacy.Encryption": "暗号化保護",
