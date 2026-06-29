@@ -38,7 +38,11 @@ Adopt three build channels stamped at compile time, plus release-please for vers
 - Dev/nightly builds are fully isolated from released data and self-identify (crash.log,
   Settings). Replaces the prior "git tag is the only version" policy.
 - Conventional Commits become load-bearing (already enforced via `committed`/lefthook).
-- New secrets `RELEASE_PLEASE_APP_ID` / `RELEASE_PLEASE_APP_PRIVATE_KEY` (dedicated App).
+- New App credentials `RELEASE_PLEASE_APP_ID` / `RELEASE_PLEASE_APP_PRIVATE_KEY`, scoped to a
+  dedicated `release-please` environment (no required reviewers — the job runs on every push to
+  `main`; the environment is the secret boundary, restricted to the `main` branch).
+- Branch protection on `main` is enforced via a repository **ruleset** (`main protection`), not the
+  legacy branch-protection rules.
 - Recommended repo hardening (settings, out of band): require a `release: approved` label
   check on the Release PR, and restrict `v*.*.*` tag creation to the release-please App.
 

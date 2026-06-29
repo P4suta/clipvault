@@ -4,7 +4,9 @@
 # release.yml, which builds, signs, attests, and uploads the assets onto that release.
 #
 # A GitHub App token (not GITHUB_TOKEN) is required so the tag push it creates is allowed to trigger
-# release.yml — events from the default token never start further workflow runs.
+# release.yml — events from the default token never start further workflow runs. The App credentials
+# are scoped to the `release-please` environment (no required reviewers — this runs on every push to
+# main; the environment is just the secret boundary, restricted to the main branch).
 name: release-please
 
 on:
@@ -20,6 +22,9 @@ concurrency:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    # Scopes the App credentials: RELEASE_PLEASE_APP_ID / RELEASE_PLEASE_APP_PRIVATE_KEY live as
+    # environment secrets here, not repo-wide.
+    environment: release-please
     permissions:
       contents: write # create the tag, the release, and push the Release PR branch
       pull-requests: write # open and update the Release PR
