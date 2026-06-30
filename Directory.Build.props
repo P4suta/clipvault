@@ -54,6 +54,12 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
+  <!-- Allow restore of the Windows-targeted projects on non-Windows hosts (e.g. the Linux dependency-graph
+       submission job), which would otherwise fail with NETSDK1100. Build/run still require Windows. -->
+  <PropertyGroup Label="Cross-OS restore">
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
   <!-- Source Link / reproducible build (SDK-provided). Repo URL embeds once an origin remote exists. -->
   <PropertyGroup Label="Source Link / reproducibility">
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
