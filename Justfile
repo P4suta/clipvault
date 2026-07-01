@@ -151,7 +151,7 @@ yamllint:
 # Lint Markdown (config in .markdownlint.yaml).
 markdownlint:
     @if command -v markdownlint-cli2 >/dev/null 2>&1; then \
-        markdownlint-cli2 "**/*.md" "#artifacts" "#**/PULL_REQUEST_TEMPLATE.md" "#**/ISSUE_TEMPLATE/**" ; \
+        markdownlint-cli2 "**/*.md" "#artifacts" "#**/CHANGELOG.md" "#**/PULL_REQUEST_TEMPLATE.md" "#**/ISSUE_TEMPLATE/**" ; \
     else \
         echo "markdownlint-cli2 not installed locally — 'npm install -g markdownlint-cli2' (needs Node) to enable this lint pass"; \
     fi
