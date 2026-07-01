@@ -2,11 +2,11 @@
 # names/colors/descriptions are version-controlled, not set by hand. Runs only when the manifest changes
 # (or on demand).
 #
-# Deliberately done with `gh` + `jq` (both pre-installed on the runner) rather than a labeler action: this
-# repo restricts Actions to a SHA-pinned allowlist, so pulling in a third-party labeler would mean
-# widening that trust surface. `gh label create --force` is create-or-update and never deletes, so the
-# sync is additive — labels missing from the manifest (GitHub defaults, future tool labels) are left
-# untouched.
+# Deliberately done with `gh` + `jq` (both pre-installed on the runner) rather than a labeler action: it
+# keeps the third-party-action surface minimal (every added action is one more SHA to pin and trust),
+# not worth it for a handful of `gh label` calls. `gh label create --force` is create-or-update and never
+# deletes, so the sync is additive — labels missing from the manifest (GitHub defaults, future tool
+# labels) are left untouched.
 name: labels-sync
 
 on:

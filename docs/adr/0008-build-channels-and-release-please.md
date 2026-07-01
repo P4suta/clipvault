@@ -59,9 +59,10 @@ Adopt three build channels stamped at compile time, plus release-please for vers
   disables auto-merge if armed on a release PR (deliberate manual merge); both the `sign` and
   `publish` jobs pause on the approval-gated `release` environment. Governance labels are declared
   in `.github/labels.json` and synced by `labels-sync.yml`.
-- The old tag **ruleset** (restrict `v*` create to the release-please App) is now optional and may be
-  **retired**: since `release.yml` is dispatch-only, a stray `v*` tag no longer triggers a release —
-  each real release's tag↔commit↔assets binding is sealed by the immutable-release attestation instead.
+- The old tag **ruleset** (restrict `v*` create to the release-please App) was **retired**: since
+  `release.yml` is dispatch-only, a stray `v*` tag no longer triggers a release — each real release's
+  tag↔commit↔assets binding is sealed by the immutable-release attestation instead. Only the
+  `main protection` branch ruleset remains.
 
 ## Alternatives considered
 
