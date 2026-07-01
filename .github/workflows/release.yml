@@ -1,34 +1,51 @@
-# Release pipeline, split into three least-privilege jobs to shrink the blast radius of the signing
-# secrets:
-#   build   -> publishes the self-contained app + SBOM. Holds NO secrets, read-only token.
-#   sign    -> Authenticode-signs the binary with SSL.com eSigner. This is the only job that sees the
-#              signing secrets, so it runs in the approval-gated `release` environment.
-#   publish -> stages zips/checksums from the SIGNED binary, binds keyless build-provenance + SBOM
-#              attestations (Sigstore via the OIDC GITHUB_TOKEN - no stored secrets), and cuts the
-#              GitHub Release.
+# Dispatched (by release-please) build / sign / publish, split into three least-privilege jobs to shrink
+# the blast radius of the signing secrets:
+#   build   -> assembles the distributable ClipVault/ bundle (app body + launcher) + SBOM and uploads
+#              them as artifacts. Holds NO secrets, read-only token.
+#   sign    -> downloads the bundle and Authenticode-signs our own two PE files (ClipVault.exe launcher
+#              + app/ClipVault.App.exe) with SSL.com eSigner via the official Action (command:
+#              batch_sign, SHA-pinned): CodeSignTool scans then signs, RFC 3161 timestamped via SSL.com's
+#              TSA. The two PEs are staged into a flat dir, signed into an explicit output dir, and copied
+#              back; then a shared composite hard-verifies chain + timestamp + signer. This is the only
+#              job that sees the signing secrets, so it runs in the approval-gated `release` environment.
+#   publish -> downloads the signed bundle, RE-VERIFIES it is signed (a gate at the irreversible
+#              boundary), zips + checksums it, binds keyless build-provenance + SBOM attestations
+#              (Sigstore via the OIDC GITHUB_TOKEN - no stored secrets) and attaches everything to the
+#              release-please DRAFT release, then publishes it (publishing is what makes the release
+#              immutable). Runs only when publish=true.
 #
-# Trust model: even while the binary is UNSIGNED, every release carries cryptographic provenance
-# (Sigstore-backed, keyless) that anyone can verify with `gh attestation verify`. Code signing is a
-# dormant step that activates automatically once the SSL.com eSigner (ES_*) secrets are configured in
-# the `release` environment; signing happens before staging/attestation, so provenance then binds to
-# the signed binary with no rework. The attestation signer identity is the workflow file path, so the
-# job split does not change `--signer-workflow .github/workflows/release.yml`.
+# Trigger: workflow_dispatch ONLY, dispatched by release-please.yml once it creates the DRAFT release. We
+# trigger on neither the `release` event (a draft fires none) nor a tag push (dispatch-only means a stray
+# tag starts nothing). release-please materializes the vX.Y.Z tag at merge (force-tag-creation, so it
+# still finds the latest release when computing the next candidate); the publish job attaches assets to
+# that draft and publishes it, in the asset-before-publish order immutable releases require.
 #
-# Dry run: trigger via `workflow_dispatch` with publish=false to exercise build+sign+verify without
-# creating a Release or attestations (safe even under immutable releases).
+# Trust model: even while the binaries are UNSIGNED, every release carries cryptographic provenance
+# (Sigstore-backed, keyless) that anyone can verify with `gh attestation verify`. Shipping
+# unsigned-with-provenance is intentional while the cert is dormant (VERIFICATION.md, ADR-0008): the
+# publish job emits a ::warning:: and still releases. Code signing activates automatically once the
+# SSL.com eSigner (ES_*) secrets are configured in the `release` environment; from then on the publish
+# job's verify-signatures step is a HARD GATE (HAVE_SIGNING=true) that FAILS before the immutable Release
+# if the bundle is not validly signed — so a misconfigured signer can't silently ship a nominally-signed
+# release that isn't. A publish=false smoke test always ends UNSIGNED-or-signed after `sign` with no
+# Release/attestations (safe under immutable releases).
+#
+# Verify a download with `gh attestation verify <zip> --repo P4suta/clipvault`. Setup: docs/SIGNING.md.
 name: release
 
 on:
-  push:
-    tags: ["v*.*.*"]
   workflow_dispatch:
     inputs:
       tag_name:
-        description: "Tag or ref to build from (e.g. v0.1.0, or main for a signing smoke test)"
+        description: "Version tag to release (e.g. v0.1.0), or a branch/ref for a publish=false signing test"
         required: true
         type: string
+      sha:
+        description: "Commit SHA to build from (release-please passes the release commit; omit to build from tag_name)"
+        required: false
+        type: string
       publish:
-        description: "Publish a GitHub Release (false = build+sign+verify only, no release/attestations)"
+        description: "Publish the GitHub Release (false = build+sign+verify only, no release/attestations)"
         required: false
         default: true
         type: boolean
@@ -37,14 +54,19 @@ on:
 permissions: {}
 
 concurrency:
-  # Key on the resolved tag/ref so manual and tag-driven runs of the same release serialize.
-  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
-  cancel-in-progress: false # never kill a half-finished release (attestations may already be created)
+  # One release per tag at a time; never cancel a run mid-sign/mid-publish (attestations may already exist).
+  group: release-${{ inputs.tag_name }}
+  cancel-in-progress: false
 
 env:
   CI: "true"
-  # Single source of truth for the ref to build/release from, for both triggers.
-  TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
+  # The version tag (vX.Y.Z) — reused for stamping, zip naming, and the release.
+  TAG: ${{ inputs.tag_name }}
+  # Where to get the code: the release commit SHA when release-please dispatches us (the tag may not
+  # exist yet, and pinning the SHA avoids main moving during the approval waits); falls back to tag_name
+  # for a manual branch smoke test. All jobs check this ref out, and the local verify-signatures action
+  # is resolved from its tree — so env.REF must point at a commit that contains that action.
+  REF: ${{ inputs.sha || inputs.tag_name }}
 
 jobs:
   build:
@@ -52,9 +74,21 @@ jobs:
     permissions:
       contents: read # only reads the repository; holds no secrets
     steps:
+      # Fail fast on a publishing run pointed at a non-version ref, before the gated `sign` job burns a
+      # reviewer approval + an eSigner signing quota on a misfire. A publish=false smoke test (e.g.
+      # tag_name=main) is deliberately exempt.
+      - name: Validate tag for a publishing run
+        if: ${{ inputs.publish }}
+        shell: bash
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::publishing run requires a vX.Y.Z tag, got '$TAG' (use publish=false for a signing smoke test from a branch)"
+            exit 1
+          fi
+
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ env.REF }}
           persist-credentials: false
 
       - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
@@ -62,7 +96,7 @@ jobs:
           install: true
           cache: true
 
-      # The git tag is the single source of truth for the version (no Version property in the repo).
+      # The git tag is the single source of truth for the version (no Version property drives the release).
       - name: Derive version from tag
         id: ver
         shell: bash
@@ -82,151 +116,201 @@ jobs:
             -p:Version=${{ steps.ver.outputs.version }} -p:Channel=stable \
             -o artifacts/publish/win-x64
 
-      # The native root launcher (ClipVault.exe) shipped at the bundle root. Built with the MSVC C++
-      # tools present on the windows runner (located via vswhere); no third-party action needed. The
-      # bundle readme is staged alongside it so both travel to the publish job (which has no checkout).
+      # The native root launcher (ClipVault.exe) shipped at the bundle root. Built with the MSVC C++ tools
+      # present on the windows runner (located via vswhere); no third-party action needed.
       - name: Build root launcher (x64)
         shell: pwsh
         run: |
           ./launcher/build.ps1 -OutputPath artifacts/launcher/ClipVault.exe -Version ${{ steps.ver.outputs.version }}
           Copy-Item launcher/dist-README.txt artifacts/launcher/README.txt
 
+      # Assemble the distributable bundle NOW (in the unsigned build) so the sign job can sign the PEs in
+      # place inside the bundle and the shared verify-signatures composite can address them by their final
+      # bundle-relative paths (ClipVault.exe + app/ClipVault.App.exe). The zip extracts to one ClipVault/
+      # folder whose single obvious entry point is ClipVault.exe.
+      - name: Assemble distributable bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="artifacts/publish/win-x64"
+          bundle="artifacts/bundle/ClipVault"
+          mkdir -p "$bundle/app"
+          cp -r "$out/." "$bundle/app/"
+          cp artifacts/launcher/ClipVault.exe "$bundle/ClipVault.exe"
+          cp artifacts/launcher/README.txt "$bundle/README.txt"
+
       - name: Generate SBOM
         run: mise exec -- just sbom ${{ steps.ver.outputs.version }}
 
-      # Hand the unsigned publish output + launcher + SBOM to the sign job. Zips/checksums are
-      # intentionally NOT created here: they must be staged from the SIGNED binaries so they match.
-      - name: Upload build output
+      # Hand the unsigned bundle to the sign job. Zips/checksums are intentionally NOT created here: they
+      # must be staged from the SIGNED bundle so they match.
+      - name: Upload unsigned bundle
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: build-output
-          path: |
-            artifacts/publish/win-x64/
-            artifacts/launcher/
-            artifacts/sbom/clipvault.cdx.json
+          name: dist
+          path: artifacts/bundle/ClipVault
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbom
+          path: artifacts/sbom/clipvault.cdx.json
           if-no-files-found: error
           retention-days: 1
 
   sign:
     needs: build
     runs-on: windows-latest
-    # Approval-gated environment: required reviewers must approve before this job (the only holder of
-    # the signing secrets) runs. ES_* live as environment secrets here, invisible to build/publish.
+    # Approval-gated environment: required reviewers must approve before this job (the only holder of the
+    # signing secrets) runs. ES_* live as environment secrets here, invisible to build/publish.
     environment: release
     permissions:
       contents: read
     env:
       # secrets.* cannot be referenced in `if:`; hoist presence to a job-level env bool, then gate the
-      # signing steps on env.HAVE_SIGNING. Environment-scoped secrets resolve only in this job.
+      # signing steps on env.HAVE_SIGNING. batch_sign is driven by the credential_id, so gate on it too.
       HAVE_SIGNING: ${{ secrets.ES_USERNAME != '' && secrets.ES_CREDENTIAL_ID != '' }}
       # The signed binary's expected certificate subject; a mismatch means a cert swap (hard-fail).
       SIGNER_SUBJECT_CONTAINS: "CN=Yasunobu Sakashita"
     steps:
-      - name: Download build output
+      # The Verify step uses a local composite action, which needs the repo tree present (this job
+      # otherwise only handles artifacts). Pin to the same release commit the bundle was built from. Runs
+      # first, before the artifact download below, so checkout's clean does not wipe the downloaded bundle.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.REF }}
+          persist-credentials: false
+
+      - name: Download unsigned bundle
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: build-output
-          path: artifacts
+          name: dist
+          path: artifacts/bundle/ClipVault
 
-      # Dormant until the SSL.com eSigner secrets exist in the `release` environment. Signs in place so
-      # the staged zip and the attestation subjects in publish are the SIGNED binary. environment_name
-      # is the eSigner CA environment (PROD = real cert).
-      - name: Code sign app body (SSL.com eSigner)
-        if: ${{ env.HAVE_SIGNING == 'true' }}
-        uses: sslcom/esigner-codesign@cf5f6c1d38ad10f47e3ed9aca873f429b1a8d85b # v1.3.2
-        with:
-          command: sign
-          username: ${{ secrets.ES_USERNAME }}
-          password: ${{ secrets.ES_PASSWORD }}
-          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
-          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
-          file_path: ${{ github.workspace }}/artifacts/publish/win-x64/ClipVault.App.exe
-          override: "true"
-          malware_block: "false"
-          environment_name: "PROD"
-
-      # The root launcher is what users double-click first, so SmartScreen evaluates it too: sign it
-      # with the same cert as the app body.
-      - name: Code sign launcher (SSL.com eSigner)
-        if: ${{ env.HAVE_SIGNING == 'true' }}
-        uses: sslcom/esigner-codesign@cf5f6c1d38ad10f47e3ed9aca873f429b1a8d85b # v1.3.2
-        with:
-          command: sign
-          username: ${{ secrets.ES_USERNAME }}
-          password: ${{ secrets.ES_PASSWORD }}
-          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
-          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
-          file_path: ${{ github.workspace }}/artifacts/launcher/ClipVault.exe
-          override: "true"
-          malware_block: "false"
-          environment_name: "PROD"
-
-      # Signing is non-blocking: a release with no configured cert still ships (with provenance), it is
-      # just unsigned. Surface it loudly so it is a deliberate state, not a silent regression.
-      - name: Warn if unsigned
-        if: ${{ env.HAVE_SIGNING != 'true' }}
-        shell: bash
-        run: echo "::warning::Signing secrets absent — publishing UNSIGNED binaries (SmartScreen will warn end users)."
-
-      # Hard-verify the Authenticode signature independently of the signing action: enforce a full chain
-      # + RFC3161 timestamp (signtool exit 2 = untimestamped, treated as failure) and assert the signer
-      # subject, so a swapped/expired/untimestamped cert fails the release rather than shipping.
-      - name: Verify Authenticode signature
-        if: ${{ env.HAVE_SIGNING == 'true' }}
+      # Collect just our own two PE files into a flat staging dir for batch_sign. The bundled .NET /
+      # WindowsAppSDK runtime DLLs are already Microsoft-signed — re-signing them would waste eSigner
+      # quota and claim authorship we don't have.
+      - name: Stage first-party binaries for signing
+        if: env.HAVE_SIGNING == 'true'
         shell: pwsh
         run: |
-          $ErrorActionPreference = "Stop"
-          $exes = @(
-            "artifacts/publish/win-x64/ClipVault.App.exe",
-            "artifacts/launcher/ClipVault.exe"
+          $map = @(
+            @{ Src = 'ClipVault.exe';         Stage = 'ClipVault.exe' }
+            @{ Src = 'app/ClipVault.App.exe'; Stage = 'ClipVault.App.exe' }
           )
+          New-Item -ItemType Directory -Force sign-stage | Out-Null
+          New-Item -ItemType Directory -Force signed | Out-Null
+          $map | ForEach-Object { Copy-Item "artifacts/bundle/ClipVault/$($_.Src)" "sign-stage/$($_.Stage)" }
 
-          $signtool = Get-ChildItem "C:/Program Files (x86)/Windows Kits/10/bin/*/x64/signtool.exe" -ErrorAction SilentlyContinue |
-            Sort-Object FullName | Select-Object -Last 1
-          if (-not $signtool) {
-            throw "signtool.exe not found in the Windows SDK on the runner"
-          }
+      - name: Sign staged binaries (SSL.com eSigner)
+        if: env.HAVE_SIGNING == 'true'
+        uses: sslcom/esigner-codesign@cf5f6c1d38ad10f47e3ed9aca873f429b1a8d85b # v1.3.2
+        with:
+          command: batch_sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          dir_path: ${{ github.workspace }}\sign-stage
+          # Write signed files to a dedicated dir. batch_sign does NOT honor `override` (the Action never
+          # forwards -override), so without an explicit output_path the signed files land elsewhere and
+          # copy-back would grab the unsigned originals (-> Verify "NotSigned").
+          output_path: ${{ github.workspace }}\signed
+          environment_name: PROD
+          # Our SSL.com account requires a pre-signing malware scan; with this off, batch_sign sends only
+          # hashes and SSL.com rejects with "hash needs to be scanned first". true makes the Action scan
+          # the files inline before signing. CodeSignTool timestamps via SSL.com's TSA (Verify enforces it).
+          malware_block: "true"
 
-          foreach ($exe in $exes) {
-            # /pa = default authenticode policy, /tw = require a timestamp (warning -> error via exit code).
-            & $signtool.FullName verify /pa /tw /v $exe
-            if ($LASTEXITCODE -ne 0) { throw "signtool verify failed for $exe (exit $LASTEXITCODE): chain or timestamp invalid" }
+      - name: Copy signed binaries back into the bundle
+        if: env.HAVE_SIGNING == 'true'
+        shell: pwsh
+        run: |
+          $map = @(
+            @{ Src = 'ClipVault.exe';         Stage = 'ClipVault.exe' }
+            @{ Src = 'app/ClipVault.App.exe'; Stage = 'ClipVault.App.exe' }
+          )
+          $map | ForEach-Object { Copy-Item "signed/$($_.Stage)" "artifacts/bundle/ClipVault/$($_.Src)" -Force }
 
-            $sig = Get-AuthenticodeSignature $exe
-            if ($sig.Status -ne "Valid") { throw "signature status for $exe is $($sig.Status), expected Valid" }
-            $subject = $sig.SignerCertificate.Subject
-            if ($subject -notlike "*$env:SIGNER_SUBJECT_CONTAINS*") {
-              throw "unexpected signer subject for $exe`: $subject (expected to contain $env:SIGNER_SUBJECT_CONTAINS)"
-            }
-            Write-Host "Authenticode signature verified: $exe -> $subject"
-          }
+      # Never ship a "signed" build that is silently unsigned, untimestamped, or signed by the wrong cert.
+      # The verify (chain + RFC 3161 timestamp + signer subject) lives in a composite action shared with
+      # the publish gate so the two can't drift — so a publish=false smoke test with signing secrets
+      # present runs the publish gate's identical check here.
+      - name: Verify signatures
+        if: env.HAVE_SIGNING == 'true'
+        uses: ./.github/actions/verify-signatures
+        with:
+          bundle-dir: artifacts/bundle/ClipVault
+          signer-subject-contains: ${{ env.SIGNER_SUBJECT_CONTAINS }}
 
-      - name: Upload signed output
+      # Signing is dormant when no cert is configured: the build passes through UNSIGNED and still ships
+      # with provenance (ClipVault's intended trust model). The publish job enforces signed-ness only once
+      # signing IS configured, so a misconfigured signer can't silently ship a nominally-signed release
+      # that isn't. Surface the unsigned state loudly so it is a deliberate choice, not a silent regression.
+      - name: Warn if unsigned
+        if: env.HAVE_SIGNING != 'true'
+        shell: bash
+        run: echo "::warning::Signing secrets absent — publishing UNSIGNED binaries (SmartScreen will warn end users). See docs/SIGNING.md to enable."
+
+      - name: Upload signed bundle
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: signed-output
-          path: |
-            artifacts/publish/win-x64/
-            artifacts/launcher/
-            artifacts/sbom/clipvault.cdx.json
+          name: dist-signed
+          path: artifacts/bundle/ClipVault
           if-no-files-found: error
           retention-days: 1
 
   publish:
     needs: sign
+    # Skip on a dry-run dispatch (publish=false): no Release, no attestations.
+    if: ${{ inputs.publish }}
     runs-on: windows-latest
-    # Skip on a dry-run dispatch (publish=false): no Release, no attestations. Tag pushes always publish.
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
+    # Second approval gate on the irreversible step: the GitHub Release is immutable, so publishing
+    # requires its own explicit human approval in the `release` environment, distinct from the `sign`
+    # approval ("sign this?" vs "release this to the world?"). Defence in depth against an accidental release.
+    environment: release
     permissions:
-      contents: write # create the GitHub Release and upload assets
+      contents: write # publish the GitHub Release and upload assets
       id-token: write # OIDC token used to sign the attestations (Sigstore)
       attestations: write # write build-provenance + SBOM attestations to the repo
+    env:
+      # This job is in the `release` environment too, so it can read the signing secrets to decide whether
+      # to enforce the signed-bundle gate below.
+      HAVE_SIGNING: ${{ secrets.ES_USERNAME != '' && secrets.ES_CREDENTIAL_ID != '' }}
     steps:
-      - name: Download signed output
+      # Needed for the verify-signatures composite. Runs first so its clean does not wipe the download.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.REF }}
+          persist-credentials: false
+
+      - name: Download signed bundle
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: signed-output
-          path: artifacts
+          name: dist-signed
+          path: artifacts/bundle/ClipVault
+
+      # Gate at the irreversible boundary — but only WHEN SIGNING IS CONFIGURED. ClipVault's trust model
+      # (VERIFICATION.md, ADR-0008) intentionally allows shipping UNSIGNED-with-provenance while the cert
+      # is dormant, so an unsigned bundle publishes with a ::warning:: (not a failure). Once the ES_*
+      # secrets exist (HAVE_SIGNING=true), this becomes a hard gate: if the bundle is not validly signed
+      # (e.g. a batch_sign misconfig silently produced unsigned output), FAIL here, before any attestation
+      # or the immutable Release, rather than shipping a nominally-signed release that isn't. Same
+      # composite verify the sign job runs.
+      - name: Require the bundle to be signed before publishing
+        if: env.HAVE_SIGNING == 'true'
+        uses: ./.github/actions/verify-signatures
+        with:
+          bundle-dir: artifacts/bundle/ClipVault
+          signer-subject-contains: "CN=Yasunobu Sakashita"
+
+      - name: Download SBOM
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sbom
+          path: artifacts/sbom
 
       - name: Derive version from tag
         id: ver
@@ -239,39 +323,32 @@ jobs:
         run: |
           set -euo pipefail
           v="${{ steps.ver.outputs.version }}"
-          out="artifacts/publish/win-x64"
           bundle="artifacts/bundle/ClipVault"
-          mkdir -p artifacts/release "$bundle/app"
-          # Assemble the distributable bundle: the signed app + dependencies under app/, with the
-          # signed launcher and a readme at the root, so the zip extracts to one ClipVault/ folder
-          # whose single obvious entry point is ClipVault.exe.
-          cp -r "$out/." "$bundle/app/"
-          cp artifacts/launcher/ClipVault.exe "$bundle/ClipVault.exe"
-          cp artifacts/launcher/README.txt "$bundle/README.txt"
-          # Runtime zip: the whole ClipVault/ folder minus PDBs; symbols zip: the app PDBs only.
-          # -xr! (recursive) is required because the PDBs are now nested under ClipVault/app/.
+          mkdir -p artifacts/release
+          # Runtime zip: the whole signed ClipVault/ folder minus PDBs; symbols zip: the app PDBs only
+          # (now nested under ClipVault/app/).
           ( cd artifacts/bundle && 7z a -tzip '-xr!*.pdb' "$GITHUB_WORKSPACE/artifacts/release/ClipVault-$v-win-x64.zip" ClipVault >/dev/null )
-          ( cd "$out" && 7z a -tzip "$GITHUB_WORKSPACE/artifacts/release/ClipVault-$v-win-x64-symbols.zip" '*.pdb' >/dev/null )
+          ( cd "$bundle/app" && 7z a -tzip "$GITHUB_WORKSPACE/artifacts/release/ClipVault-$v-win-x64-symbols.zip" '*.pdb' >/dev/null )
           cp artifacts/sbom/clipvault.cdx.json artifacts/release/
           ( cd artifacts/release && sha256sum -- * > SHA256SUMS.txt )
           echo "Staged:"; ls -la artifacts/release
 
-      # SLSA build provenance, bound to both signed exes (app body + launcher) and both distributed
-      # zips (runtime + symbols).
+      # SLSA build provenance, bound to both signed exes (app body + launcher) and both distributed zips.
       - name: Attest build provenance
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
           subject-path: |
-            artifacts/publish/win-x64/ClipVault.App.exe
-            artifacts/launcher/ClipVault.exe
+            artifacts/bundle/ClipVault/ClipVault.exe
+            artifacts/bundle/ClipVault/app/ClipVault.App.exe
             artifacts/release/ClipVault-${{ steps.ver.outputs.version }}-win-x64.zip
             artifacts/release/ClipVault-${{ steps.ver.outputs.version }}-win-x64-symbols.zip
 
-      # Bind the CycloneDX SBOM to the application binary.
+      # Bind the CycloneDX SBOM to the application binary. actions/attest-sbom was deprecated; the generic
+      # actions/attest carries the same SBOM predicate.
       - name: Attest SBOM
-        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
         with:
-          subject-path: artifacts/publish/win-x64/ClipVault.App.exe
+          subject-path: artifacts/bundle/ClipVault/app/ClipVault.App.exe
           sbom-path: artifacts/sbom/clipvault.cdx.json
 
       # Self-check: prove the attestations verify before publishing (catches digest/binding regressions
@@ -283,7 +360,7 @@ jobs:
         run: |
           set -euo pipefail
           v="${{ steps.ver.outputs.version }}"
-          exe="artifacts/publish/win-x64/ClipVault.App.exe"
+          exe="artifacts/bundle/ClipVault/app/ClipVault.App.exe"
           zip="artifacts/release/ClipVault-$v-win-x64.zip"
           for i in 1 2 3 4 5; do
             if gh attestation verify "$zip" --repo "$GITHUB_REPOSITORY" \
@@ -296,26 +373,17 @@ jobs:
           done
           echo "ERROR: attestations did not verify."; exit 1
 
-      # release-please creates the tag + Release (with Conventional-Commit notes) when its Release PR
-      # merges, then this tag-triggered run attaches the signed assets to it. Wait briefly for that
-      # release to appear, then upload. Fall back to creating the release for manual/tag-only runs that
-      # did not originate from release-please (e.g. a hand-pushed tag).
-      - name: Attach assets to the GitHub Release
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          for i in 1 2 3 4 5; do
-            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-              gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber artifacts/release/*
-              exit 0
-            fi
-            echo "Release $TAG not present yet (attempt $i); waiting..."; sleep 15
-          done
-          echo "No release for $TAG after waiting; creating one (non-release-please path)."
-          gh release create "$TAG" \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "ClipVault ${{ steps.ver.outputs.version }}" \
-            --generate-notes \
-            artifacts/release/*
+      # release-please created this release as a DRAFT (config "draft": true) — no assets yet, but the
+      # vX.Y.Z tag already exists (force-tag-creation). Uploading to a draft is allowed; softprops uploads
+      # the files and THEN publishes the draft (the order immutable releases require: assets in place
+      # before publish). `draft` is intentionally omitted so the action publishes after upload; the notes
+      # are release-please's, so we don't regenerate them.
+      - name: Publish the draft release with the signed assets
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
+        with:
+          tag_name: ${{ env.TAG }}
+          files: |
+            artifacts/release/ClipVault-${{ steps.ver.outputs.version }}-win-x64.zip
+            artifacts/release/ClipVault-${{ steps.ver.outputs.version }}-win-x64-symbols.zip
+            artifacts/release/clipvault.cdx.json
+            artifacts/release/SHA256SUMS.txt

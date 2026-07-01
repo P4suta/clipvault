@@ -5,11 +5,12 @@
   "tag-separator": "-",
   "bump-minor-pre-major": true,
   "bump-patch-for-minor-pre-major": true,
-  "draft": false,
   "prerelease": false,
   "packages": {
     ".": {
       "changelog-path": "CHANGELOG.md",
+      "draft": true,
+      "force-tag-creation": true,
       "extra-files": [
         {
           "type": "generic",
