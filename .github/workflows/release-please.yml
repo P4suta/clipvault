@@ -1,17 +1,24 @@
-# Automated versioning. release-please reads Conventional Commits on main and maintains an open Release
-# PR that bumps the version (Directory.Build.props via the x-release-please-version marker + the manifest)
-# and the changelog. Merging that PR creates the v<X.Y.Z> tag and a GitHub Release; the tag then triggers
-# release.yml, which builds, signs, attests, and uploads the assets onto that release.
+# Automated versioning — the version/CHANGELOG/tag bot (ADR-0008).
 #
-# A GitHub App token (not GITHUB_TOKEN) is required so the tag push it creates is allowed to trigger
-# release.yml — events from the default token never start further workflow runs. The App credentials
-# are scoped to the `release-please` environment (no required reviewers — this runs on every push to
-# main; the environment is just the secret boundary, restricted to the main branch).
+# Conventional Commits land on main → release-please keeps an open Release PR that bumps the version
+# (Directory.Build.props via the x-release-please-version marker + the manifest) and the changelog.
+# Merging that PR makes release-please materialize the v<X.Y.Z> tag (force-tag-creation) and create the
+# GitHub Release as a DRAFT (config "draft": true); this workflow then dispatches release.yml, which
+# builds → signs → attaches assets to the draft → publishes it. The draft-first order is what makes
+# assets land before the release becomes immutable. Humans never hand-pick or hand-edit a version.
+#
+# A GitHub App token (not GITHUB_TOKEN) is required so release-please pushes the release commit / opens
+# the PR under a signed identity. The App credentials — RELEASE_PLEASE_CLIENT_ID and
+# RELEASE_PLEASE_PRIVATE_KEY — are scoped to the `release-please` environment (no required reviewers —
+# this runs on every push to main; the environment is just the secret boundary, restricted to main).
+# The release.yml dispatch below uses GITHUB_TOKEN — a workflow_dispatch is the one event GITHUB_TOKEN
+# may start (the documented recursion-guard exception). See docs/RELEASING.md.
 name: release-please
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions: {}
 
@@ -22,23 +29,56 @@ concurrency:
 jobs:
   release-please:
     runs-on: ubuntu-latest
-    # Scopes the App credentials: RELEASE_PLEASE_APP_ID / RELEASE_PLEASE_APP_PRIVATE_KEY live as
+    # Scopes the App credentials: RELEASE_PLEASE_CLIENT_ID / RELEASE_PLEASE_PRIVATE_KEY live as
     # environment secrets here, not repo-wide.
     environment: release-please
     permissions:
-      contents: write # create the tag, the release, and push the Release PR branch
+      contents: write # create the release commit, the draft Release, and push the Release PR branch
       pull-requests: write # open and update the Release PR
+      actions: write # dispatch release.yml once the draft Release is created
+    env:
+      # Server-side boolean — never exposes the secret values. With the App secrets unset the job runs
+      # green and no-ops (ships dormant), which also smooths the one-time rename from the old
+      # RELEASE_PLEASE_APP_ID secrets to the client-id names.
+      HAS_APP: ${{ secrets.RELEASE_PLEASE_CLIENT_ID != '' && secrets.RELEASE_PLEASE_PRIVATE_KEY != '' }}
     steps:
-      # Mint a short-lived token for the dedicated release-please GitHub App so its tag/release events
-      # can trigger release.yml. App credentials live as repo secrets.
+      # Mint a short-lived token for the dedicated release-please GitHub App (authenticated by
+      # client-id). App credentials live as environment secrets.
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
+        if: env.HAS_APP == 'true'
         with:
-          app-id: ${{ secrets.RELEASE_PLEASE_APP_ID }}
-          private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+          client-id: ${{ secrets.RELEASE_PLEASE_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_PRIVATE_KEY }}
 
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: rp
+        if: env.HAS_APP == 'true'
         with:
           token: ${{ steps.app-token.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      # release-please created the GitHub Release as a DRAFT (config "draft": true). Draft releases fire
+      # no `release` event, so explicitly kick off release.yml to build → sign → attach assets to the
+      # draft → publish it. A GITHUB_TOKEN dispatch IS allowed to start a workflow_dispatch run (the
+      # documented recursion-guard exception), so this needs no App token. Only tag_name/sha (plain
+      # string outputs) are used — never fromJSON() a possibly-empty output in a step `env:` (it is
+      # evaluated eagerly regardless of `if:` and would crash the no-op runs). ADR-0008.
+      - name: Trigger the signed-release build
+        if: ${{ env.HAS_APP == 'true' && steps.rp.outputs.release_created == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ steps.rp.outputs.tag_name }}
+          SHA: ${{ steps.rp.outputs.sha }}
+        run: |
+          gh workflow run release.yml --repo "$REPO" --ref main \
+            -f tag_name="$TAG" -f sha="$SHA" -f publish=true
+
+      - name: release-please (dormant — App not configured)
+        if: env.HAS_APP != 'true'
+        run: |
+          echo "::notice::release-please is dormant — set RELEASE_PLEASE_CLIENT_ID and"
+          echo "RELEASE_PLEASE_PRIVATE_KEY (a GitHub App) in the release-please environment to activate."
+          echo "See docs/RELEASING.md and ADR-0008."
