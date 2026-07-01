@@ -97,10 +97,19 @@ jobs:
           cache: true
 
       # The git tag is the single source of truth for the version (no Version property drives the release).
+      # A publish=false smoke test can run from a branch/ref (e.g. tag_name=main) that is not a version;
+      # MSBuild's -p:Version rejects a non-numeric string, so fall back to 0.0.0 for that throwaway build.
+      # Real publishing runs are gated to vX.Y.Z upstream, so they always take the real-version branch.
       - name: Derive version from tag
         id: ver
         shell: bash
-        run: echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+        run: |
+          raw="${TAG#v}"
+          if [[ "$raw" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "version=$raw" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=0.0.0" >> "$GITHUB_OUTPUT"
+          fi
 
       # Validate lockfile integrity for the standard graph before building.
       - name: Restore (locked)
