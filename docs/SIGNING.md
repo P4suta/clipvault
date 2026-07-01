@@ -56,7 +56,7 @@ Get-AuthenticodeSignature <file>   # SignerCertificate.Subject must contain CN=Y
 
 ### B. Configure eSigner for automated signing
 
-4. In the SSL.com dashboard, on the certificate order: set the eSigner signing secret and enable automated
+1. In the SSL.com dashboard, on the certificate order: set the eSigner signing secret and enable automated
    signing; note the **Credential ID**, the **TOTP (2FA) secret** (Base32), and the account
    **username / password**.
 
@@ -65,14 +65,14 @@ Get-AuthenticodeSignature <file>   # SignerCertificate.Subject must contain CN=Y
 The secrets live in an **approval-gated GitHub Environment**, not at repository level, so a
 `workflow_dispatch` from an arbitrary ref (or a compromised workflow) cannot mint signatures unattended.
 
-5. Repository → **Settings → Environments → New environment** → name it **`release`**.
-6. **Required reviewers**: add yourself (every signing run pauses for a deliberate approval).
+1. Repository → **Settings → Environments → New environment** → name it **`release`**.
+2. **Required reviewers**: add yourself (every signing run pauses for a deliberate approval).
    **Deployment branches and tags → Selected**: allow `main` (release.yml always runs via
    `workflow_dispatch --ref main`).
-7. **Environment secrets** — all four are required by `batch_sign`:
+3. **Environment secrets** — all four are required by `batch_sign`:
 
    | Secret name | Value |
-   |---|---|
+   | --- | --- |
    | `ES_USERNAME` | SSL.com username |
    | `ES_PASSWORD` | SSL.com password |
    | `ES_CREDENTIAL_ID` | Credential ID of the signing certificate |
@@ -84,14 +84,15 @@ The secrets live in an **approval-gated GitHub Environment**, not at repository 
 
 ### D. Verification
 
-8. **Signing smoke test (safe under immutable releases)**: Actions → release → `workflow_dispatch` with
+1. **Signing smoke test (safe under immutable releases)**: Actions → release → `workflow_dispatch` with
    `tag_name=main`, `publish=false`. The `build` job runs, then the **`sign` job pauses for approval**.
    Approve it; confirm **Verify signatures** prints `verified: … - CN=Yasunobu Sakashita
    (chain+timestamp+signer OK)` for both files and the run **ends cleanly after `sign`** (no Release).
-9. **Real release**: merge the `release: approved` Release PR — release-please creates the draft and
+2. **Real release**: merge the `release: approved` Release PR — release-please creates the draft and
    dispatches release.yml. After both approvals, `build`→`sign`→`publish` runs end-to-end and the signed
    zip + symbols + SBOM + `SHA256SUMS.txt` + attestations are attached to the published release.
-10. **Local confirmation**: extract the Release zip and on Windows:
+3. **Local confirmation**: extract the Release zip and on Windows:
+
     ```powershell
     signtool verify /pa /tw /v ClipVault.exe          # → Successfully verified, with a timestamp
     Get-AuthenticodeSignature ClipVault.exe            # → Status: Valid

@@ -114,7 +114,7 @@ The base `X.Y.Z` is the release-please-managed number in `Directory.Build.props`
 layered at build time via the MSBuild `Channel` property, driving `InformationalVersion`.
 
 | Channel | Example | Where |
-|---|---|---|
+| --- | --- | --- |
 | dev | `0.1.0-dev+g<sha>` | local `just publish` / `dotnet build` |
 | nightly | `0.1.0-nightly.20260701` | `nightly.yml` |
 | stable | `0.1.0` | `release.yml` (release commit; version from the tag) |
