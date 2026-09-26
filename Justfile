@@ -76,6 +76,11 @@ test:
     {{dotnet}} test {{infra_tests}}
     {{dotnet}} test {{app_ui_tests}}
 
+# Run the test projects that do not depend on Windows DPAPI, WinUI, or UI automation.
+test-portable:
+    {{dotnet}} test {{domain_tests}}
+    {{dotnet}} test {{app_tests}}
+
 # Run a single test project: just test-one Infrastructure
 test-one project:
     {{dotnet}} test tests/ClipVault.{{project}}.Tests/ClipVault.{{project}}.Tests.csproj

@@ -72,8 +72,8 @@ workflow identity). See [docs/VERIFICATION.md](docs/VERIFICATION.md) for step-by
 - Central Package Management with committed `packages.lock.json` lockfiles; CI restores in `--locked-mode`.
 - `nuget.config` restricts package sources to nuget.org with package source mapping (dependency-confusion
   defense).
-- CI runs analyzers (warnings as errors), tests, a dependency vulnerability audit, and CodeQL. Dependabot keeps
-  dependencies and SHA-pinned GitHub Actions current.
+- CI runs analyzers (warnings as errors), tests, a dependency vulnerability audit, and CodeQL.
+  Mend-hosted Renovate keeps dependencies and SHA-pinned GitHub Actions current under the shared P4suta policy.
 - Release artifacts get SLSA build-provenance and SBOM attestations bound to the binary's digest; the release
   workflow verifies its own attestations before publishing.
 - The release runs as three least-privilege jobs — `build` (no secrets, read-only), `sign`, and `publish` — so
