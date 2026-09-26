@@ -46,8 +46,8 @@ jobs:
       # Conventional Commits gate on the PR's commit range (squash-merge uses the PR title; this also
       # catches non-conforming commits early).
       - name: Lint commit messages (Conventional Commits)
-        # Dependabot's "Bump …" subjects are not Conventional Commits (and exceed 50 chars); skip them.
-        if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
+        # Renovate's generated dependency subjects may exceed the 50-character human-commit limit, so its pull requests use the reviewed squash title instead.
+        if: github.event_name == 'pull_request' && github.actor != 'renovate[bot]'
         shell: bash
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
