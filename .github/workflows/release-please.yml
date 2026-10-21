@@ -33,6 +33,7 @@ jobs:
     # environment secrets here, not repo-wide.
     environment: release-please
     permissions:
+      id-token: write
       contents: write # create the release commit, the draft Release, and push the Release PR branch
       pull-requests: write # open and update the Release PR
       actions: write # dispatch release.yml once the draft Release is created
@@ -40,16 +41,30 @@ jobs:
       # Server-side boolean — never exposes the secret values. With the App secrets unset the job runs
       # green and no-ops (ships dormant), which also smooths the one-time rename from the old
       # RELEASE_PLEASE_APP_ID secrets to the client-id names.
-      HAS_APP: ${{ secrets.RELEASE_PLEASE_CLIENT_ID != '' && secrets.RELEASE_PLEASE_PRIVATE_KEY != '' }}
+      HAS_APP: ${{ vars.DOPPLER_AUTOMATION_IDENTITY_ID != '' }}
     steps:
-      # Mint a short-lived token for the dedicated release-please GitHub App (authenticated by
-      # client-id). App credentials live as environment secrets.
+      - name: Fetch automation credentials
+        id: doppler_automation_0
+        if: "env.HAS_APP == 'true'"
+        uses: dopplerhq/secrets-fetch-action@451892f16195f9ac360e1a5bcbf0b5fd0e957534
+        with:
+          auth-method: oidc
+          doppler-identity-id: ${{ vars.DOPPLER_AUTOMATION_IDENTITY_ID }}
+          doppler-project: clipvault
+          doppler-config: automation
+          inject-env-vars: false
+      - name: Reject missing or unresolved automation credentials
+        if: >-
+          ${{ steps.doppler_automation_0.outcome == 'success' && (steps.doppler_automation_0.outputs.GITHUB_APP_CLIENT_ID == '' || startsWith(steps.doppler_automation_0.outputs.GITHUB_APP_CLIENT_ID, '${') || steps.doppler_automation_0.outputs.GITHUB_APP_PRIVATE_KEY == '' || startsWith(steps.doppler_automation_0.outputs.GITHUB_APP_PRIVATE_KEY, '${')) }}
+        shell: bash
+        run: exit 1
+
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
         if: env.HAS_APP == 'true'
         with:
-          client-id: ${{ secrets.RELEASE_PLEASE_CLIENT_ID }}
-          private-key: ${{ secrets.RELEASE_PLEASE_PRIVATE_KEY }}
+          client-id: ${{ steps.doppler_automation_0.outputs.GITHUB_APP_CLIENT_ID }}
+          private-key: ${{ steps.doppler_automation_0.outputs.GITHUB_APP_PRIVATE_KEY }}
 
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: rp

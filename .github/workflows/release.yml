@@ -176,17 +176,15 @@ jobs:
     # signing secrets) runs. ES_* live as environment secrets here, invisible to build/publish.
     environment: release
     permissions:
+      id-token: write
       contents: read
     env:
       # secrets.* cannot be referenced in `if:`; hoist presence to a job-level env bool, then gate the
       # signing steps on env.HAVE_SIGNING. batch_sign is driven by the credential_id, so gate on it too.
-      HAVE_SIGNING: ${{ secrets.ES_USERNAME != '' && secrets.ES_CREDENTIAL_ID != '' }}
+      HAVE_SIGNING: ${{ vars.DOPPLER_SIGN_WINDOWS_IDENTITY_ID != '' }}
       # The signed binary's expected certificate subject; a mismatch means a cert swap (hard-fail).
       SIGNER_SUBJECT_CONTAINS: "CN=Yasunobu Sakashita"
     steps:
-      # The Verify step uses a local composite action, which needs the repo tree present (this job
-      # otherwise only handles artifacts). Pin to the same release commit the bundle was built from. Runs
-      # first, before the artifact download below, so checkout's clean does not wipe the downloaded bundle.
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ env.REF }}
@@ -213,15 +211,31 @@ jobs:
           New-Item -ItemType Directory -Force signed | Out-Null
           $map | ForEach-Object { Copy-Item "artifacts/bundle/ClipVault/$($_.Src)" "sign-stage/$($_.Stage)" }
 
+      - name: Fetch sign_windows credentials
+        id: doppler_sign_windows_3
+        if: "env.HAVE_SIGNING == 'true'"
+        uses: dopplerhq/secrets-fetch-action@451892f16195f9ac360e1a5bcbf0b5fd0e957534
+        with:
+          auth-method: oidc
+          doppler-identity-id: ${{ vars.DOPPLER_SIGN_WINDOWS_IDENTITY_ID }}
+          doppler-project: clipvault
+          doppler-config: sign_windows
+          inject-env-vars: false
+      - name: Reject missing or unresolved sign_windows credentials
+        if: >-
+          ${{ steps.doppler_sign_windows_3.outcome == 'success' && (steps.doppler_sign_windows_3.outputs.SSLDOTCOM_CREDENTIAL_ID == '' || startsWith(steps.doppler_sign_windows_3.outputs.SSLDOTCOM_CREDENTIAL_ID, '${') || steps.doppler_sign_windows_3.outputs.SSLDOTCOM_PASSWORD == '' || startsWith(steps.doppler_sign_windows_3.outputs.SSLDOTCOM_PASSWORD, '${') || steps.doppler_sign_windows_3.outputs.SSLDOTCOM_TOTP_SECRET == '' || startsWith(steps.doppler_sign_windows_3.outputs.SSLDOTCOM_TOTP_SECRET, '${') || steps.doppler_sign_windows_3.outputs.SSLDOTCOM_USERNAME == '' || startsWith(steps.doppler_sign_windows_3.outputs.SSLDOTCOM_USERNAME, '${')) }}
+        shell: bash
+        run: exit 1
+
       - name: Sign staged binaries (SSL.com eSigner)
         if: env.HAVE_SIGNING == 'true'
         uses: sslcom/esigner-codesign@cf5f6c1d38ad10f47e3ed9aca873f429b1a8d85b # v1.3.2
         with:
           command: batch_sign
-          username: ${{ secrets.ES_USERNAME }}
-          password: ${{ secrets.ES_PASSWORD }}
-          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
-          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          username: ${{ steps.doppler_sign_windows_3.outputs.SSLDOTCOM_USERNAME }}
+          password: ${{ steps.doppler_sign_windows_3.outputs.SSLDOTCOM_PASSWORD }}
+          credential_id: ${{ steps.doppler_sign_windows_3.outputs.SSLDOTCOM_CREDENTIAL_ID }}
+          totp_secret: ${{ steps.doppler_sign_windows_3.outputs.SSLDOTCOM_TOTP_SECRET }}
           dir_path: ${{ github.workspace }}\sign-stage
           # Write signed files to a dedicated dir. batch_sign does NOT honor `override` (the Action never
           # forwards -override), so without an explicit output_path the signed files land elsewhere and
@@ -287,9 +301,8 @@ jobs:
     env:
       # This job is in the `release` environment too, so it can read the signing secrets to decide whether
       # to enforce the signed-bundle gate below.
-      HAVE_SIGNING: ${{ secrets.ES_USERNAME != '' && secrets.ES_CREDENTIAL_ID != '' }}
+      HAVE_SIGNING: ${{ vars.DOPPLER_SIGN_WINDOWS_IDENTITY_ID != '' }}
     steps:
-      # Needed for the verify-signatures composite. Runs first so its clean does not wipe the download.
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ env.REF }}
