@@ -223,7 +223,16 @@ jobs:
           inject-env-vars: false
       - name: Reject missing or unresolved sign_windows credentials
         if: >-
-          ${{ steps.doppler_sign_windows_3.outcome == 'success' && (steps.doppler_sign_windows_3.outputs.SSLDOTCOM_CREDENTIAL_ID == '' || startsWith(steps.doppler_sign_windows_3.outputs.SSLDOTCOM_CREDENTIAL_ID, '${') || steps.doppler_sign_windows_3.outputs.SSLDOTCOM_PASSWORD == '' || startsWith(steps.doppler_sign_windows_3.outputs.SSLDOTCOM_PASSWORD, '${') || steps.doppler_sign_windows_3.outputs.SSLDOTCOM_TOTP_SECRET == '' || startsWith(steps.doppler_sign_windows_3.outputs.SSLDOTCOM_TOTP_SECRET, '${') || steps.doppler_sign_windows_3.outputs.SSLDOTCOM_USERNAME == '' || startsWith(steps.doppler_sign_windows_3.outputs.SSLDOTCOM_USERNAME, '${')) }}
+          ${{ steps.doppler_sign_windows_3.outcome == 'success' && (
+          steps.doppler_sign_windows_3.outputs.SSLDOTCOM_CREDENTIAL_ID == '' ||
+          startsWith(steps.doppler_sign_windows_3.outputs.SSLDOTCOM_CREDENTIAL_ID, '${') ||
+          steps.doppler_sign_windows_3.outputs.SSLDOTCOM_PASSWORD == '' ||
+          startsWith(steps.doppler_sign_windows_3.outputs.SSLDOTCOM_PASSWORD, '${') ||
+          steps.doppler_sign_windows_3.outputs.SSLDOTCOM_TOTP_SECRET == '' ||
+          startsWith(steps.doppler_sign_windows_3.outputs.SSLDOTCOM_TOTP_SECRET, '${') ||
+          steps.doppler_sign_windows_3.outputs.SSLDOTCOM_USERNAME == '' ||
+          startsWith(steps.doppler_sign_windows_3.outputs.SSLDOTCOM_USERNAME, '${')
+          ) }}
         shell: bash
         run: exit 1
 
