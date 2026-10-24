@@ -3,6 +3,9 @@
 # fit real-world GitHub Actions and issue-template YAML.
 extends: default
 
+ignore: |
+  **/node_modules/**
+
 rules:
   # Workflow / issue-template YAML routinely runs past 80 columns (URLs,
   # descriptions, ${{ ... }} expressions). 120 is the practical ceiling;
