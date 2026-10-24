@@ -1,6 +1,6 @@
-# Manual preview: an UNSIGNED, channel-stamped bundle from main, published as a 14-day GitHub Actions artifact (NOT a Release) so nightlies stay off the Releases list and out of the immutable-release flow.
-# The approval-gated signing pipeline is stable-only (see release.yml); nightly testers accept the SmartScreen warning.
-# A nightly build isolates its own data under %LOCALAPPDATA%\ClipVault\nightly.
+# Build an unsigned preview from main on manual request.
+# Upload the channel-stamped bundle as a 14-day Actions artifact.
+# Preview data stays in %LOCALAPPDATA%\ClipVault\nightly.
 name: nightly
 
 on:
@@ -20,7 +20,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -32,7 +32,7 @@ jobs:
           date="$(date -u +%Y%m%d)"
           echo "channel=nightly.$date" >> "$GITHUB_OUTPUT"
 
-      - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         with:
           install: true
           cache: true
@@ -62,7 +62,7 @@ jobs:
           ls -la artifacts/release
 
       - name: Upload nightly artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: clipvault-nightly
           path: artifacts/release/

@@ -81,18 +81,18 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.REF }}
           persist-credentials: false
 
-      - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         with:
           install: true
           cache: false
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
+        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           languages: csharp
           build-mode: manual
@@ -104,7 +104,7 @@ jobs:
         run: mise exec -- just build
 
       - name: Analyze release source
-        uses: github/codeql-action/analyze@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
+        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           output: artifacts/codeql
           upload: never
@@ -112,7 +112,7 @@ jobs:
 
       - name: Keep CodeQL results
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-codeql
           path: artifacts/codeql/
@@ -126,14 +126,14 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.REF }}
           persist-credentials: false
 
       # Generic CI mode builds the selected checkout instead of the controller revision.
       - name: Build release fuzzers
-        uses: docker://gcr.io/oss-fuzz-base/clusterfuzzlite-build-fuzzers@sha256:abf0a73494f15c9551a05c1894c45673cf8db9ddbfc49b1ea0ceabb815fab911
+        uses: docker://gcr.io/oss-fuzz-base/clusterfuzzlite-build-fuzzers:v1@sha256:abf0a73494f15c9551a05c1894c45673cf8db9ddbfc49b1ea0ceabb815fab911
         env:
           CFL_PLATFORM: generic
           WORKSPACE: /github/workspace
@@ -146,7 +146,7 @@ jobs:
           LOW_DISK_SPACE: "true"
 
       - name: Fuzz release parsers
-        uses: docker://gcr.io/oss-fuzz-base/clusterfuzzlite-run-fuzzers@sha256:65e4adb9333d0cf4209492c5b617a7425f760aab879cebfa63284b251f002c27
+        uses: docker://gcr.io/oss-fuzz-base/clusterfuzzlite-run-fuzzers:v1@sha256:65e4adb9333d0cf4209492c5b617a7425f760aab879cebfa63284b251f002c27
         env:
           CFL_PLATFORM: generic
           WORKSPACE: /github/workspace
@@ -178,12 +178,12 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.REF }}
           persist-credentials: false
 
-      - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         with:
           install: true
           cache: true
@@ -253,7 +253,7 @@ jobs:
       # Hand the unsigned bundle to the sign job. Zips/checksums are intentionally NOT created here: they
       # must be staged from the SIGNED bundle so they match.
       - name: Upload unsigned bundle
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dist
           path: artifacts/bundle/ClipVault
@@ -261,7 +261,7 @@ jobs:
           retention-days: 1
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sbom
           path: artifacts/sbom/clipvault.cdx.json
@@ -285,7 +285,7 @@ jobs:
       # The signed binary's expected certificate subject; a mismatch means a cert swap (hard-fail).
       SIGNER_SUBJECT_CONTAINS: "CN=Yasunobu Sakashita"
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.REF }}
           persist-credentials: false
@@ -387,7 +387,7 @@ jobs:
         run: echo "::warning::Signing secrets absent — publishing UNSIGNED binaries (SmartScreen will warn end users). See docs/SIGNING.md to enable."
 
       - name: Upload signed bundle
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dist-signed
           path: artifacts/bundle/ClipVault
@@ -413,7 +413,7 @@ jobs:
       # to enforce the signed-bundle gate below.
       HAVE_SIGNING: ${{ vars.DOPPLER_SIGN_WINDOWS_IDENTITY_ID != '' }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.REF }}
           persist-credentials: false
