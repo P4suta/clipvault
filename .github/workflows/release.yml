@@ -69,8 +69,9 @@ env:
   TAG: ${{ inputs.tag_name }}
   # Where to get the code: the release commit SHA when release-please dispatches us (the tag may not
   # exist yet, and pinning the SHA avoids main moving during the approval waits); falls back to tag_name
-  # for a manual branch smoke test. All jobs check this ref out, and the local verify-signatures action
-  # is resolved from its tree — so env.REF must point at a commit that contains that action.
+  # for a manual branch smoke test.
+  # All source jobs check out this ref.
+  # Signature verification uses the independently pinned action from reviewed main.
   REF: ${{ inputs.sha || inputs.tag_name }}
 
 jobs:
@@ -135,7 +136,9 @@ jobs:
       - name: Build release fuzzers
         uses: docker://gcr.io/oss-fuzz-base/clusterfuzzlite-build-fuzzers:v1@sha256:abf0a73494f15c9551a05c1894c45673cf8db9ddbfc49b1ea0ceabb815fab911
         env:
-          CFL_PLATFORM: generic
+          CFL_PLATFORM: standalone
+          FILESTORE: filesystem
+          FILESTORE_ROOT_DIR: /github/workspace/cifuzz-filestore
           WORKSPACE: /github/workspace
           PROJECT_SRC_PATH: /github/workspace
           REPOSITORY: clipvault
@@ -148,7 +151,9 @@ jobs:
       - name: Fuzz release parsers
         uses: docker://gcr.io/oss-fuzz-base/clusterfuzzlite-run-fuzzers:v1@sha256:65e4adb9333d0cf4209492c5b617a7425f760aab879cebfa63284b251f002c27
         env:
-          CFL_PLATFORM: generic
+          CFL_PLATFORM: standalone
+          FILESTORE: filesystem
+          FILESTORE_ROOT_DIR: /github/workspace/cifuzz-filestore
           WORKSPACE: /github/workspace
           PROJECT_SRC_PATH: /github/workspace
           REPOSITORY: clipvault
@@ -157,6 +162,15 @@ jobs:
           FUZZ_SECONDS: "300"
           MODE: code-change
           LOW_DISK_SPACE: "true"
+
+      - name: Keep parser crash evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-parser-crashes
+          path: out/artifacts/
+          if-no-files-found: warn
+          retention-days: 14
 
   build:
     name: Build release distribution
