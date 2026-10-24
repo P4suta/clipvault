@@ -96,10 +96,9 @@ On the first Release PR, confirm the diff bumps **both** `<Version>` in `Directo
 
 ## Nightly builds
 
-[`nightly.yml`](../.github/workflows/nightly.yml) builds an **unsigned** bundle from the tip of `main`
-daily (and on demand), stamped `X.Y.Z-nightly.<date>`, published as a **14-day GitHub Actions artifact**,
-not a Release — keeping it off the Releases list and clear of the immutable-release flow. Skips when `main`
-is unchanged in 24h. Grab the latest:
+Run [`nightly.yml`](../.github/workflows/nightly.yml) manually to build an **unsigned** preview from `main`.
+The build stamps `X.Y.Z-nightly.<date>` and uploads a **14-day GitHub Actions artifact**.
+Download the preview:
 
 ```bash
 gh run download --repo P4suta/clipvault -n clipvault-nightly
@@ -107,6 +106,21 @@ gh run download --repo P4suta/clipvault -n clipvault-nightly
 
 Nightlies are unsigned (SmartScreen will warn), carry no stability guarantee, and isolate their own data
 under `%LOCALAPPDATA%\ClipVault\nightly`.
+
+## Release source verification
+
+The release workflow runs CodeQL and five minutes of parser fuzzing against the selected source before building distributions.
+Both jobs use read-only repository access and run without restored build caches.
+The `release-codeql` artifact contains the analysis results.
+
+Set `verify_only=true` and `publish=false` to run source verification without distribution building, signing, or publication:
+
+```bash
+gh workflow run release.yml --repo P4suta/clipvault \
+  -f tag_name=main -f verify_only=true -f publish=false
+```
+
+See [Release verification budget](adr/release-verification-budget.md).
 
 ## Build identity (channels)
 
