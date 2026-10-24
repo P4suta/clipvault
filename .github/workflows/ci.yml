@@ -1,12 +1,12 @@
-# Continuous integration: lint, build, analyze, test, and audit dependencies on every push/PR.
+# Lint, build, analyze, test, and audit dependencies on pull requests and merge groups.
 # Mirrors the local `just` flow so CI and developer machines share one source of truth.
 name: ci
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+  merge_group:
+    types: [checks_requested]
 
 # Deny by default at the workflow scope; the one job grants only what it needs.
 permissions: {}
@@ -20,8 +20,10 @@ env:
 
 jobs:
   build-test:
+    name: Verify Windows
     # Windows is required: the app targets net10.0-windows + WinUI 3 (Windows App SDK).
     runs-on: windows-latest
+    timeout-minutes: 20
     permissions:
       contents: read # only needs to read the repository
     steps:
@@ -36,12 +38,10 @@ jobs:
           install: true
           cache: true
 
-      # yamllint (Python) and markdownlint-cli2 (Node) are not pinned by mise; install them here so the
-      # `just yamllint` / `just markdownlint` recipes (which no-op when absent) actually enforce the pass.
       - name: Install text linters (yamllint, markdownlint-cli2)
         run: |
-          pip install --disable-pip-version-check yamllint
-          npm install -g markdownlint-cli2
+          pip install --disable-pip-version-check --require-hashes -r .ci/linters/requirements.txt
+          npm ci --prefix .ci/linters --ignore-scripts
 
       # Conventional Commits gate on the PR's commit range (squash-merge uses the PR title; this also
       # catches non-conforming commits early).
@@ -74,7 +74,8 @@ jobs:
         run: mise exec -- just yamllint
 
       - name: Lint Markdown (markdownlint)
-        run: mise exec -- just markdownlint
+        shell: bash
+        run: PATH="$PWD/.ci/linters/node_modules/.bin:$PATH" mise exec -- just markdownlint
 
       - name: Strict-code gate
         run: mise exec -- just strict-code
@@ -87,7 +88,7 @@ jobs:
 
   # The one status check branch protection requires,
   # named the same in every P4suta repository.
-  # It passes only when every job it needs succeeded or was skipped.
+  # It passes only when the Windows check succeeds.
   required:
     name: required
     if: always()
@@ -96,9 +97,9 @@ jobs:
     timeout-minutes: 5
     permissions: {}
     steps:
-      - name: Fail unless every needed job succeeded or was skipped
+      - name: Require the Windows check
         env:
-          RESULTS: ${{ toJSON(needs.*.result) }}
+          RESULTS: ${{ toJSON(needs) }}
         run: |
           echo "${RESULTS}"
-          jq -e 'all(.[]; IN("success", "skipped"))' <<< "${RESULTS}"
+          jq -e '."build-test".result == "success"' <<< "${RESULTS}"

@@ -44,6 +44,6 @@ pre-push:
     - rebase
   commands:
     test:
-      run: if [ "${OS:-}" = Windows_NT ]; then just test; else echo "Full tests require Windows; running the portable test projects locally."; just test-portable; fi
+      run: case ${OS:-} in Windows_NT) just test ;; *) just test-portable ;; esac
     audit:
       run: just audit
