@@ -49,6 +49,11 @@ on:
         required: false
         default: true
         type: boolean
+      verify_only:
+        description: "Check the selected source without building distributions, signing, or publishing"
+        required: false
+        default: false
+        type: boolean
 
 # Deny by default at the workflow scope; each job grants only the scopes it needs.
 permissions: {}
@@ -69,7 +74,94 @@ env:
   REF: ${{ inputs.sha || inputs.tag_name }}
 
 jobs:
+  verify-codeql:
+    name: Verify release code (CodeQL)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.REF }}
+          persist-credentials: false
+
+      - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        with:
+          install: true
+          cache: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
+        with:
+          languages: csharp
+          build-mode: manual
+
+      - name: Restore locked dependencies
+        run: mise exec -- just restore-locked
+
+      - name: Build with CodeQL
+        run: mise exec -- just build
+
+      - name: Analyze release source
+        uses: github/codeql-action/analyze@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
+        with:
+          output: artifacts/codeql
+          upload: never
+          upload-database: false
+
+      - name: Keep CodeQL results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-codeql
+          path: artifacts/codeql/
+          if-no-files-found: error
+          retention-days: 14
+
+  verify-fuzz:
+    name: Verify release parsers
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.REF }}
+          persist-credentials: false
+
+      # Generic CI mode builds the selected checkout instead of the controller revision.
+      - name: Build release fuzzers
+        uses: docker://gcr.io/oss-fuzz-base/clusterfuzzlite-build-fuzzers@sha256:abf0a73494f15c9551a05c1894c45673cf8db9ddbfc49b1ea0ceabb815fab911
+        env:
+          CFL_PLATFORM: generic
+          WORKSPACE: /github/workspace
+          PROJECT_SRC_PATH: /github/workspace
+          REPOSITORY: clipvault
+          LANGUAGE: c++
+          SANITIZER: address
+          BAD_BUILD_CHECK: "true"
+          KEEP_UNAFFECTED_FUZZ_TARGETS: "true"
+          LOW_DISK_SPACE: "true"
+
+      - name: Fuzz release parsers
+        uses: docker://gcr.io/oss-fuzz-base/clusterfuzzlite-run-fuzzers@sha256:65e4adb9333d0cf4209492c5b617a7425f760aab879cebfa63284b251f002c27
+        env:
+          CFL_PLATFORM: generic
+          WORKSPACE: /github/workspace
+          PROJECT_SRC_PATH: /github/workspace
+          REPOSITORY: clipvault
+          LANGUAGE: c++
+          SANITIZER: address
+          FUZZ_SECONDS: "300"
+          MODE: code-change
+          LOW_DISK_SPACE: "true"
+
   build:
+    name: Build release distribution
+    needs: [verify-codeql, verify-fuzz]
+    if: ${{ !inputs.verify_only }}
     runs-on: windows-latest
     permissions:
       contents: read # only reads the repository; holds no secrets
@@ -119,18 +211,22 @@ jobs:
       # default '-dev' suffix, so the InformationalVersion is a clean X.Y.Z and data lands in the stable root.
       - name: Publish self-contained (x64)
         shell: bash
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
         run: |
           mise exec -- dotnet publish src/ClipVault.App/ClipVault.App.csproj \
             -c Release -p:Platform=x64 --self-contained -p:RestoreLockedMode=true \
-            -p:Version=${{ steps.ver.outputs.version }} -p:Channel=stable \
+            -p:Version="$VERSION" -p:Channel=stable \
             -o artifacts/publish/win-x64
 
       # The native root launcher (ClipVault.exe) shipped at the bundle root. Built with the MSVC C++ tools
       # present on the windows runner (located via vswhere); no third-party action needed.
       - name: Build root launcher (x64)
         shell: pwsh
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
         run: |
-          ./launcher/build.ps1 -OutputPath artifacts/launcher/ClipVault.exe -Version ${{ steps.ver.outputs.version }}
+          ./launcher/build.ps1 -OutputPath artifacts/launcher/ClipVault.exe -Version $env:VERSION
           Copy-Item launcher/dist-README.txt artifacts/launcher/README.txt
 
       # Assemble the distributable bundle NOW (in the unsigned build) so the sign job can sign the PEs in
@@ -149,7 +245,10 @@ jobs:
           cp artifacts/launcher/README.txt "$bundle/README.txt"
 
       - name: Generate SBOM
-        run: mise exec -- just sbom ${{ steps.ver.outputs.version }}
+        shell: bash
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: mise exec -- just sbom "$VERSION"
 
       # Hand the unsigned bundle to the sign job. Zips/checksums are intentionally NOT created here: they
       # must be staged from the SIGNED bundle so they match.
@@ -170,13 +269,14 @@ jobs:
           retention-days: 1
 
   sign:
+    name: Sign release distribution
     needs: build
     runs-on: windows-latest
     # Approval-gated environment: required reviewers must approve before this job (the only holder of the
     # signing secrets) runs. ES_* live as environment secrets here, invisible to build/publish.
     environment: release
     permissions:
-      id-token: write
+      id-token: write # authenticate to the signing identity through OIDC
       contents: read
     env:
       # secrets.* cannot be referenced in `if:`; hoist presence to a job-level env bool, then gate the
@@ -272,7 +372,7 @@ jobs:
       # present runs the publish gate's identical check here.
       - name: Verify signatures
         if: env.HAVE_SIGNING == 'true'
-        uses: ./.github/actions/verify-signatures
+        uses: P4suta/clipvault/.github/actions/verify-signatures@b0c8bbb0a5ec6e218c77da145a60f29067cd3420
         with:
           bundle-dir: artifacts/bundle/ClipVault
           signer-subject-contains: ${{ env.SIGNER_SUBJECT_CONTAINS }}
@@ -295,9 +395,10 @@ jobs:
           retention-days: 1
 
   publish:
+    name: Publish verified release
     needs: sign
     # Skip on a dry-run dispatch (publish=false): no Release, no attestations.
-    if: ${{ inputs.publish }}
+    if: ${{ inputs.publish && !inputs.verify_only }}
     runs-on: windows-latest
     # Second approval gate on the irreversible step: the GitHub Release is immutable, so publishing
     # requires its own explicit human approval in the `release` environment, distinct from the `sign`
@@ -332,7 +433,7 @@ jobs:
       # composite verify the sign job runs.
       - name: Require the bundle to be signed before publishing
         if: env.HAVE_SIGNING == 'true'
-        uses: ./.github/actions/verify-signatures
+        uses: P4suta/clipvault/.github/actions/verify-signatures@b0c8bbb0a5ec6e218c77da145a60f29067cd3420
         with:
           bundle-dir: artifacts/bundle/ClipVault
           signer-subject-contains: "CN=Yasunobu Sakashita"
@@ -351,9 +452,11 @@ jobs:
       - name: Stage release assets (zips + SBOM + checksums)
         id: stage
         shell: bash
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
         run: |
           set -euo pipefail
-          v="${{ steps.ver.outputs.version }}"
+          v="$VERSION"
           bundle="artifacts/bundle/ClipVault"
           mkdir -p artifacts/release
           # Runtime zip: the whole signed ClipVault/ folder minus PDBs; symbols zip: the app PDBs only
@@ -388,9 +491,10 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.ver.outputs.version }}
         run: |
           set -euo pipefail
-          v="${{ steps.ver.outputs.version }}"
+          v="$VERSION"
           exe="artifacts/bundle/ClipVault/app/ClipVault.App.exe"
           zip="artifacts/release/ClipVault-$v-win-x64.zip"
           for i in 1 2 3 4 5; do
@@ -404,17 +508,20 @@ jobs:
           done
           echo "ERROR: attestations did not verify."; exit 1
 
-      # release-please created this release as a DRAFT (config "draft": true) — no assets yet, but the
-      # vX.Y.Z tag already exists (force-tag-creation). Uploading to a draft is allowed; softprops uploads
-      # the files and THEN publishes the draft (the order immutable releases require: assets in place
-      # before publish). `draft` is intentionally omitted so the action publishes after upload; the notes
-      # are release-please's, so we don't regenerate them.
+      # Upload every verified asset to the existing draft before publishing it.
       - name: Publish the draft release with the signed assets
-        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
-        with:
-          tag_name: ${{ env.TAG }}
-          files: |
-            artifacts/release/ClipVault-${{ steps.ver.outputs.version }}-win-x64.zip
-            artifacts/release/ClipVault-${{ steps.ver.outputs.version }}-win-x64-symbols.zip
-            artifacts/release/clipvault.cdx.json
-            artifacts/release/SHA256SUMS.txt
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" != true ]]; then
+            echo "::error::The target release must be a draft."
+            exit 1
+          fi
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" \
+            "artifacts/release/ClipVault-$VERSION-win-x64.zip" \
+            "artifacts/release/ClipVault-$VERSION-win-x64-symbols.zip" \
+            artifacts/release/clipvault.cdx.json artifacts/release/SHA256SUMS.txt
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --verify-tag

@@ -50,7 +50,7 @@ Every build carries a channel (`dev` / `nightly` / `stable`) stamped into
 
 - **dev** — the default for `just build` / `just run`: `X.Y.Z-dev+<sha>`. Isolated data
   under `%LOCALAPPDATA%\ClipVault\dev`, so a dev build never touches your real history.
-- **nightly** — `nightly.yml` (daily / manual), unsigned, a 14-day Actions artifact.
+- **nightly** — `nightly.yml` (manual), unsigned, a 14-day Actions artifact.
   Data under `...\ClipVault\nightly`. Fetch: `gh run download -n clipvault-nightly`.
 - **stable** — tagged releases (`X.Y.Z`, no suffix), data under `...\ClipVault`.
 
