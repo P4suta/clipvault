@@ -1,0 +1,12 @@
+name = "Clipboard history"
+summary = "Encrypted clipboard history for Windows"
+install = "git clone https://github.com/P4suta/clipvault.git\ncd clipvault\nmise trust\nmise install\nmise x -- just bootstrap"
+usage_language = "sh"
+usage = "mise x -- just run"
+
+documentation_index = true
+license = "Apache-2.0"
+
+[[preserved_licenses.assets]]
+path = "LICENSE"
+sha256 = "d9f6fb59ecfec04b94092f9dfc58ddf7803e367a254c48057e339fb0850f513f"
