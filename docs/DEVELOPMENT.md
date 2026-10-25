@@ -1,80 +1,77 @@
 # Development
 
-The daily dev loop. Toolchain is pinned by mise; tasks run through `just` (the Justfile is the single
-source of truth — `just` lists every recipe). For contribution policy and the quality gate see
-[CONTRIBUTING.md](../CONTRIBUTING.md); for the layer map see [ARCHITECTURE.md](./ARCHITECTURE.md).
+Mise pins the toolchain, and the [Justfile](../Justfile) defines the project commands.
+Run `just` to list every recipe.
+The [contribution guide](../CONTRIBUTING.md) defines contribution policy and the quality gate.
+The [architecture guide](ARCHITECTURE.md) maps the project layers.
 
 ## Setup
 
-1. Install mise and bootstrap — see the [README](../README.md#build--run) (`mise install` → `just bootstrap`).
-2. Open the project. **Visual Studio / Rider**: open `ClipVault.slnx`. **VS Code**: accept the recommended
-   extensions; `.vscode/` provides build/test/run/lint/check tasks (Ctrl+Shift+B builds) and an F5 launch
-   config that debugs the unpackaged exe.
-3. `just doctor` — verifies the toolchain resolves, git hooks are installed, and the environment is sane.
+Follow the [source setup](README.md#setup), then open `ClipVault.slnx` in Visual Studio or Rider.
+In Visual Studio Code, use the recommended extensions and the tasks in `.vscode/`.
+Ctrl+Shift+B builds the app, and F5 starts the unpackaged app under the debugger.
+Run `just doctor` to check tool resolution, Git hooks, and the local environment.
 
 ## Daily loop
 
-- `just run` — stop → build → launch (unpackaged).
-- `just check` — fast inner-loop check (incremental App build + style/grep verify); **not** the full gate.
-- `just watch-check` — recompile the App on every change (build-only).
-- `just fix` — apply every auto-fixer (whitespace, code style, typos); review the diff.
-- `just test` / `just test-one Infrastructure` / `just test-filter KeyProtector` — run tests.
-- `just watch-test Application` — re-run a test project on change.
-- `just lint` — the full static gate (format + analyzers + typos + linters + strict-code); `just pre-commit`
-  previews the lefthook chain.
+Run `just run` to stop a resident instance, build, and launch the app.
+Run `just check` for an incremental app build with style and source checks.
+The full gate remains `just lint`.
+Run `just watch-check` to rebuild the app when files change.
+Run `just fix` to apply formatting and spelling corrections, then inspect the diff.
 
-## Recipe cheat-sheet
+Run `just test` for every test project or select a project and test filter.
+Use `just watch-test Application` to rerun a test project when its files change.
 
-The daily subset. `just` lists everything; see the [Justfile](../Justfile) for the rest.
+```sh
+just test-one Infrastructure
+just test-filter KeyProtector
+just watch-test Application
+```
 
-| Recipe                 | Does                                                                 |
-| ---------------------- | -------------------------------------------------------------------- |
-| `bootstrap`            | One-time onboarding: toolchain, hooks, tools, restore.               |
-| `build`                | Build the App (x64).                                                 |
-| `run`                  | Stop -> build -> launch (unpackaged).                                |
-| `check`                | Fast inner-loop check (incremental build + fmt-check + strict-code). |
-| `watch-check`          | Recompile the App on every change.                                   |
-| `fix`                  | Auto-fix whitespace, code style, typos.                              |
-| `fmt` / `fmt-check`    | Apply / verify formatting.                                           |
-| `test` / `test-one`    | Run all / a single test project.                                     |
-| `watch-test <Project>` | Re-run a test project on change.                                     |
-| `lint`                 | Full static gate (no tests).                                         |
-| `analyze`              | Build every project with warnings-as-errors (the heavy gate).        |
-| `doctor`               | Environment health check.                                            |
+## Recipe reference
+
+Use `just bootstrap` for the toolchain, hooks, local tools, and dependency restore.
+Use `just build` for the x64 app.
+Use `just fmt` to format source and `just fmt-check` to verify formatting.
+The `just lint` gate includes formatting, analyzers, spelling, workflow syntax, YAML, Markdown, and the source suppression policy.
+Run `just pre-commit` to preview the local commit checks.
+The `just analyze` recipe rebuilds every project with warnings as errors.
 
 ## Build channels
 
-Every build carries a channel (`dev` / `nightly` / `stable`) stamped into
-`InformationalVersion` and shown in Settings and `crash.log`. See
-[ADR-0008](adr/0008-build-channels-and-release-please.md).
+Each build records its channel in `InformationalVersion`, Settings, and `crash.log`.
+The [build-channel decision](adr/0008-build-channels-and-release-please.md) defines the version format.
 
-- **dev** — the default for `just build` / `just run`: `X.Y.Z-dev+<sha>`. Isolated data
-  under `%LOCALAPPDATA%\ClipVault\dev`, so a dev build never touches your real history.
-- **nightly** — `nightly.yml` (manual), unsigned, a 14-day Actions artifact.
-  Data under `...\ClipVault\nightly`. Fetch: `gh run download -n clipvault-nightly`.
-- **stable** — tagged releases (`X.Y.Z`, no suffix), data under `...\ClipVault`.
+The default `dev` channel uses `X.Y.Z-dev+<sha>` and stores data under `%LOCALAPPDATA%\ClipVault\dev`.
+The separate directory keeps development history apart from stable history.
+The manually dispatched `nightly` workflow produces an unsigned artifact with 14-day retention and stores data under `%LOCALAPPDATA%\ClipVault\nightly`.
+Download its artifact with `gh run download -n clipvault-nightly`.
+The `stable` channel uses `X.Y.Z` and stores data under `%LOCALAPPDATA%\ClipVault`.
 
-Versions are not hand-edited: release-please bumps `<Version>` in `Directory.Build.props`
-from Conventional Commits. `just version [channel]` prints the canonical version string.
+The `release-please` workflow updates `<Version>` in `Directory.Build.props` from Conventional Commits.
+Run `just version [channel]` to print the version string.
 
-## Notes
+## Build behavior
 
-- A tray-resident instance locks `ClipVault.App.exe`; `just run` / `just stop` (and the VS Code
-  `build` task) kill it first.
-- Local builds are x64 only — an slnx-wide x64 build hits MSB4126, so recipes build the App and each
-  test project individually (see the `analyze` comment in the Justfile).
-- `just check` is incremental and App-only for speed. The authoritative gate is `just lint` (and the
-  pre-commit `analyze`), which rebuild every project with `--no-incremental` so analyzers always re-run.
+A resident instance holds `ClipVault.App.exe` open.
+The `just run`, `just stop`, and Visual Studio Code build tasks stop it before building.
+Local app builds target x64.
+Recipes build the app and each test project because a solution-wide x64 build reports MSB4126.
 
-## Off-Windows
+The `just check` recipe uses an incremental app build for the inner loop.
+The full `just lint` gate invokes `just analyze` with `--no-incremental` so analyzers run for every project.
 
-WinUI requires Windows, so the full app builds and runs on Windows only. `Domain` and `Application`
-are `net10.0` (no Windows TFM) and build/test anywhere with the .NET 10 SDK:
+## Work outside Windows
+
+WinUI requires Windows for the app build and launch.
+The `ClipVault.Domain` and `ClipVault.Application` projects target `net10.0` and can run their tests on other systems with the .NET 10 SDK.
 
 ```sh
 dotnet test tests/ClipVault.Domain.Tests
 dotnet test tests/ClipVault.Application.Tests
 ```
 
-`Infrastructure`, the WinUI `App`, and `just build` / `just run` need Windows. Classifier, capture-rule,
-use-case, and docs work are fully doable off-Windows; the Windows gate runs in CI.
+Infrastructure, the WinUI app, `just build`, and `just run` require Windows.
+Classifier, capture-rule, use-case, and documentation changes can use the portable projects.
+CI runs the Windows gate.
