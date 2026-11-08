@@ -40,7 +40,7 @@ url = "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_
 provenance = "github-attestations"
 
 [[tools.dotnet]]
-version = "10.0.300"
+version = "10.0.403"
 backend = "core:dotnet"
 
 [[tools."github:crate-ci/committed"]]

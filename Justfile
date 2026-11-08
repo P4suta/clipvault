@@ -30,8 +30,8 @@ default:
 bootstrap:
     mise install
     just hooks
-    {{dotnet}} tool restore
-    {{dotnet}} restore {{sln}}
+    {{ dotnet }} tool restore
+    {{ dotnet }} restore {{ sln }}
     @echo "Ready. Try: just build"
 
 hooks:
@@ -46,24 +46,24 @@ hooks-uninstall:
 
 # Build the app (x64).
 build:
-    {{dotnet}} build {{app}} -p:Platform=x64
+    {{ dotnet }} build {{ app }} -p:Platform=x64
 
 # Restore dependencies.
 restore:
-    {{dotnet}} restore {{sln}}
+    {{ dotnet }} restore {{ sln }}
 
 # Restore with the committed lockfiles enforced (fails if packages.lock.json drifts). Used by CI/Release.
 restore-locked:
-    {{dotnet}} restore {{sln}} --locked-mode
+    {{ dotnet }} restore {{ sln }} --locked-mode
 
 # Regenerate packages.lock.json after changing dependencies (Directory.Packages.props / *.csproj).
 relock:
-    {{dotnet}} restore {{sln}} --force-evaluate
+    {{ dotnet }} restore {{ sln }} --force-evaluate
     @echo "Lockfiles refreshed. Review and commit the packages.lock.json changes."
 
 # List dependencies with newer versions available (advisory only).
 outdated:
-    {{dotnet}} list {{sln}} package --outdated
+    {{ dotnet }} list {{ sln }} package --outdated
 
 # ---------------------------------------------------------------------------
 # Test
@@ -71,27 +71,27 @@ outdated:
 
 # Run all tests (Domain / Application / Infrastructure / App).
 test:
-    {{dotnet}} test {{domain_tests}}
-    {{dotnet}} test {{app_tests}}
-    {{dotnet}} test {{infra_tests}}
-    {{dotnet}} test {{app_ui_tests}}
+    {{ dotnet }} test {{ domain_tests }}
+    {{ dotnet }} test {{ app_tests }}
+    {{ dotnet }} test {{ infra_tests }}
+    {{ dotnet }} test {{ app_ui_tests }}
 
 # Run the test projects that do not depend on Windows DPAPI, WinUI, or UI automation.
 test-portable:
-    {{dotnet}} test {{domain_tests}}
-    {{dotnet}} test {{app_tests}}
+    {{ dotnet }} test {{ domain_tests }}
+    {{ dotnet }} test {{ app_tests }}
 
 # Run a single test project: just test-one Infrastructure
 test-one project:
-    {{dotnet}} test tests/ClipVault.{{project}}.Tests/ClipVault.{{project}}.Tests.csproj
+    {{ dotnet }} test tests/ClipVault.{{ project }}.Tests/ClipVault.{{ project }}.Tests.csproj
 
 # Run tests filtered by name: just test-filter KeyProtector
 test-filter pattern:
-    {{dotnet}} test {{infra_tests}} --filter "{{pattern}}"
+    {{ dotnet }} test {{ infra_tests }} --filter "{{ pattern }}"
 
 # Re-run a test project on file changes (default: Application). e.g. just watch-test Domain
 watch-test project="Application":
-    {{dotnet}} watch --project tests/ClipVault.{{project}}.Tests/ClipVault.{{project}}.Tests.csproj test
+    {{ dotnet }} watch --project tests/ClipVault.{{ project }}.Tests/ClipVault.{{ project }}.Tests.csproj test
 
 # ---------------------------------------------------------------------------
 # Run lifecycle
@@ -103,7 +103,7 @@ stop:
 
 # Stop -> build -> launch (unpackaged, no install).
 run: stop build
-    {{dotnet}} run --project {{app}} -p:Platform=x64
+    {{ dotnet }} run --project {{ app }} -p:Platform=x64
 
 # Remove build outputs (all of artifacts/, plus legacy bin/obj/dist just in case).
 clean: stop
@@ -119,21 +119,21 @@ rebuild: clean build
 
 # Fix whitespace and code style to match .editorconfig (analyzers are enforced by `just analyze`).
 fmt:
-    {{dotnet}} format whitespace {{sln}}
-    {{dotnet}} format style {{sln}}
+    {{ dotnet }} format whitespace {{ sln }}
+    {{ dotnet }} format style {{ sln }}
 
 # Verify whitespace and code style have no drift (CI / pre-commit; analyzers are enforced by `just analyze`).
 fmt-check:
-    {{dotnet}} format whitespace {{sln}} --verify-no-changes
-    {{dotnet}} format style {{sln}} --verify-no-changes
+    {{ dotnet }} format whitespace {{ sln }} --verify-no-changes
+    {{ dotnet }} format style {{ sln }} --verify-no-changes
 
 # Spell-check source, configs, and docs (config in _typos.toml; honors .gitignore).
 typos:
-    {{typos}}
+    {{ typos }}
 
 # Fix typos in place (review the diff before committing).
 typos-fix:
-    {{typos}} --write-changes
+    {{ typos }} --write-changes
 
 # Lint GitHub Actions workflows.
 actionlint:
@@ -166,11 +166,11 @@ markdownlint:
 
 # Analyze all projects with warnings as errors (the C# analog of the template's clippy gate).
 analyze: stop
-    {{dotnet}} build {{app}} -p:Platform=x64 --no-incremental -warnaserror
-    {{dotnet}} build {{domain_tests}} --no-incremental -warnaserror
-    {{dotnet}} build {{app_tests}} --no-incremental -warnaserror
-    {{dotnet}} build {{infra_tests}} --no-incremental -warnaserror
-    {{dotnet}} build {{app_ui_tests}} -p:Platform=x64 --no-incremental -warnaserror
+    {{ dotnet }} build {{ app }} -p:Platform=x64 --no-incremental -warnaserror
+    {{ dotnet }} build {{ domain_tests }} --no-incremental -warnaserror
+    {{ dotnet }} build {{ app_tests }} --no-incremental -warnaserror
+    {{ dotnet }} build {{ infra_tests }} --no-incremental -warnaserror
+    {{ dotnet }} build {{ app_ui_tests }} -p:Platform=x64 --no-incremental -warnaserror
 
 # The Rust template forbids `unsafe` outright; ClipVault legitimately needs `unsafe` for Win32
 # interop (see AllowUnsafeBlocks), so this gate enforces the project's suppression policy instead.
@@ -203,7 +203,7 @@ fix: fmt typos-fix
 
 # Fast inner-loop check (seconds): incremental App build + style/grep verify.
 check: stop
-    {{dotnet}} build {{app}} -p:Platform=x64 -warnaserror
+    {{ dotnet }} build {{ app }} -p:Platform=x64 -warnaserror
     just fmt-check
     just strict-code
 
@@ -212,7 +212,7 @@ check: stop
 
 # Recompile the App on every change (build-only fast feedback).
 watch-check:
-    {{dotnet}} watch --project {{app}} -p:Platform=x64 build
+    {{ dotnet }} watch --project {{ app }} -p:Platform=x64 build
 
 # ---------------------------------------------------------------------------
 # Audit, coverage
@@ -226,7 +226,7 @@ audit:
     #!/usr/bin/env bash
     set -euo pipefail
     # Force English output so the gate is locale-independent (the dev machine may be localized).
-    out=$(DOTNET_CLI_UI_LANGUAGE=en {{dotnet}} list {{sln}} package --vulnerable --include-transitive 2>&1) || { echo "$out"; echo "dotnet list failed"; exit 1; }
+    out=$(DOTNET_CLI_UI_LANGUAGE=en {{ dotnet }} list {{ sln }} package --vulnerable --include-transitive 2>&1) || { echo "$out"; echo "dotnet list failed"; exit 1; }
     echo "$out"
     if echo "$out" | grep -qi 'has the following vulnerable packages'; then
       echo "ERROR: known-vulnerable packages detected (see above)."; exit 1
@@ -235,26 +235,26 @@ audit:
 
 # Collect line/branch coverage (Cobertura via coverlet) for every test project into artifacts/coverage.
 coverage:
-    -rm -rf {{coverage_dir}}
-    {{dotnet}} test {{domain_tests}} --collect:"XPlat Code Coverage" --settings {{runsettings}} --results-directory {{coverage_dir}}
-    {{dotnet}} test {{app_tests}} --collect:"XPlat Code Coverage" --settings {{runsettings}} --results-directory {{coverage_dir}}
-    {{dotnet}} test {{infra_tests}} --collect:"XPlat Code Coverage" --settings {{runsettings}} --results-directory {{coverage_dir}}
-    {{dotnet}} test {{app_ui_tests}} --collect:"XPlat Code Coverage" --settings {{runsettings}} --results-directory {{coverage_dir}}
-    @echo "Cobertura reports under {{coverage_dir}}/*/coverage.cobertura.xml"
+    -rm -rf {{ coverage_dir }}
+    {{ dotnet }} test {{ domain_tests }} --collect:"XPlat Code Coverage" --settings {{ runsettings }} --results-directory {{ coverage_dir }}
+    {{ dotnet }} test {{ app_tests }} --collect:"XPlat Code Coverage" --settings {{ runsettings }} --results-directory {{ coverage_dir }}
+    {{ dotnet }} test {{ infra_tests }} --collect:"XPlat Code Coverage" --settings {{ runsettings }} --results-directory {{ coverage_dir }}
+    {{ dotnet }} test {{ app_ui_tests }} --collect:"XPlat Code Coverage" --settings {{ runsettings }} --results-directory {{ coverage_dir }}
+    @echo "Cobertura reports under {{ coverage_dir }}/*/coverage.cobertura.xml"
 
 # Build an HTML coverage report (requires the pinned ReportGenerator local tool; opens artifacts/coverage/html).
 coverage-html: coverage
-    {{dotnet}} tool restore
-    {{dotnet}} reportgenerator "-reports:{{coverage_dir}}/**/coverage.cobertura.xml" "-targetdir:{{coverage_dir}}/html" "-reporttypes:Html;TextSummary"
-    @echo "Open {{coverage_dir}}/html/index.html"
+    {{ dotnet }} tool restore
+    {{ dotnet }} reportgenerator "-reports:{{ coverage_dir }}/**/coverage.cobertura.xml" "-targetdir:{{ coverage_dir }}/html" "-reporttypes:Html;TextSummary"
+    @echo "Open {{ coverage_dir }}/html/index.html"
 
 # Ratchet gate: fail if line/branch coverage drops below the floor (override via COVERAGE_MIN_LINE / COVERAGE_MIN_BRANCH).
 coverage-check: coverage
     #!/usr/bin/env bash
     set -euo pipefail
-    {{dotnet}} tool restore
-    {{dotnet}} reportgenerator "-reports:{{coverage_dir}}/**/coverage.cobertura.xml" "-targetdir:{{coverage_dir}}/summary" "-reporttypes:TextSummary" >/dev/null
-    summary="{{coverage_dir}}/summary/Summary.txt"
+    {{ dotnet }} tool restore
+    {{ dotnet }} reportgenerator "-reports:{{ coverage_dir }}/**/coverage.cobertura.xml" "-targetdir:{{ coverage_dir }}/summary" "-reporttypes:TextSummary" >/dev/null
+    summary="{{ coverage_dir }}/summary/Summary.txt"
     cat "$summary"
     line=$(grep -i 'Line coverage' "$summary" | grep -oE '[0-9]+(\.[0-9]+)?' | head -1)
     branch=$(grep -i 'Branch coverage' "$summary" | grep -oE '[0-9]+(\.[0-9]+)?' | head -1)
@@ -285,7 +285,7 @@ version channel="dev":
     #!/usr/bin/env bash
     set -euo pipefail
     base=$(just base-version)
-    if [ "{{channel}}" = "stable" ]; then echo "$base"; else echo "$base-{{channel}}"; fi
+    if [ "{{ channel }}" = "stable" ]; then echo "$base"; else echo "$base-{{ channel }}"; fi
 
 # -o pins a deterministic output path (the publish profile's PublishDir otherwise lands under
 # src/.../bin and hardcodes the TFM). The output is assembled into a tidy ClipVault/ bundle so the
@@ -296,28 +296,28 @@ version channel="dev":
 publish channel="dev": stop
     #!/usr/bin/env bash
     set -euo pipefail
-    ver=$(just version {{channel}})
-    {{dotnet}} publish {{app}} -c Release -p:Platform=x64 --self-contained -p:Channel={{channel}} -o {{publish_dir}}
+    ver=$(just version {{ channel }})
+    {{ dotnet }} publish {{ app }} -c Release -p:Platform=x64 --self-contained -p:Channel={{ channel }} -o {{ publish_dir }}
     # Root launcher (ClipVault.exe). No-op when the MSVC C++ tools are absent on a .NET-only box.
-    powershell -NoProfile -ExecutionPolicy Bypass -File launcher/build.ps1 -OutputPath "{{launcher_dir}}/ClipVault.exe" -Version "$ver" -SkipIfMissingToolchain
+    powershell -NoProfile -ExecutionPolicy Bypass -File launcher/build.ps1 -OutputPath "{{ launcher_dir }}/ClipVault.exe" -Version "$ver" -SkipIfMissingToolchain
     # Assemble: app/ holds the published app + dependencies; the launcher and readme sit at the root.
-    rm -rf "{{bundle_dir}}"
-    mkdir -p "{{bundle_dir}}/app"
-    cp -r "{{publish_dir}}/." "{{bundle_dir}}/app/"
-    cp launcher/dist-README.txt "{{bundle_dir}}/README.txt"
-    if [ -f "{{launcher_dir}}/ClipVault.exe" ]; then
-      cp "{{launcher_dir}}/ClipVault.exe" "{{bundle_dir}}/ClipVault.exe"
-      echo "Output: {{bundle_dir}}/ClipVault.exe"
+    rm -rf "{{ bundle_dir }}"
+    mkdir -p "{{ bundle_dir }}/app"
+    cp -r "{{ publish_dir }}/." "{{ bundle_dir }}/app/"
+    cp launcher/dist-README.txt "{{ bundle_dir }}/README.txt"
+    if [ -f "{{ launcher_dir }}/ClipVault.exe" ]; then
+      cp "{{ launcher_dir }}/ClipVault.exe" "{{ bundle_dir }}/ClipVault.exe"
+      echo "Output: {{ bundle_dir }}/ClipVault.exe"
     else
-      echo "Output: {{bundle_dir}}/app/ClipVault.App.exe (root launcher skipped: MSVC C++ tools absent)"
+      echo "Output: {{ bundle_dir }}/app/ClipVault.App.exe (root launcher skipped: MSVC C++ tools absent)"
     fi
 
 # Pass a version to stamp it: `just sbom 1.2.3` (defaults to 0.0.0). Spec 1.6 for broad tooling support.
 
 # Generate a CycloneDX SBOM for the shipped closure (test + dev deps excluded) into artifacts/sbom.
 sbom version="0.0.0":
-    {{dotnet}} tool restore
-    {{dotnet}} dotnet-CycloneDX {{sln}} -t -ed -o artifacts/sbom -fn clipvault.cdx.json -F Json -spv 1.6 --set-name ClipVault --set-version {{version}}
+    {{ dotnet }} tool restore
+    {{ dotnet }} dotnet-CycloneDX {{ sln }} -t -ed -o artifacts/sbom -fn clipvault.cdx.json -F Json -spv 1.6 --set-name ClipVault --set-version {{ version }}
     @echo "SBOM: artifacts/sbom/clipvault.cdx.json"
 
 # Production releases are signed by SSL.com eSigner (cloud HSM) in the release workflow; this recipe
@@ -335,7 +335,7 @@ sign:
     fi
     signtool=$(find "$HOME/.nuget/packages/microsoft.windows.sdk.buildtools" -iname signtool.exe -path '*/x64/*' 2>/dev/null | sort | tail -1)
     [ -n "$signtool" ] || { echo "signtool.exe not found in restored SDK BuildTools"; exit 1; }
-    for exe in "{{bundle_dir}}/app/ClipVault.App.exe" "{{bundle_dir}}/ClipVault.exe"; do
+    for exe in "{{ bundle_dir }}/app/ClipVault.App.exe" "{{ bundle_dir }}/ClipVault.exe"; do
       [ -f "$exe" ] || { echo "skip (not present): $exe"; continue; }
       "$signtool" sign /fd SHA256 /f "$CLIPVAULT_PFX" /p "${CLIPVAULT_PFX_PASSWORD:-}" /tr http://timestamp.digicert.com /td SHA256 "$exe"
       "$signtool" verify /pa /v "$exe"
@@ -349,7 +349,7 @@ sign:
 publish-release version="0.0.0": (sbom version)
     just publish stable
     just sign
-    @echo "Local release staged: {{bundle_dir}}/ + artifacts/sbom/clipvault.cdx.json"
+    @echo "Local release staged: {{ bundle_dir }}/ + artifacts/sbom/clipvault.cdx.json"
 
 # ---------------------------------------------------------------------------
 # Aggregate gates
@@ -378,7 +378,7 @@ doctor:
     for t in dotnet just lefthook typos actionlint committed; do
       mise exec -- "$t" --version >/dev/null 2>&1 && ok "tool: $t" || bad "tool unresolved: $t (run: mise install)"
     done
-    want=$(grep -E '^dotnet' mise.toml | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+    want=$(mise current dotnet)
     got=$(mise exec -- dotnet --version 2>/dev/null)
     { [ -n "$got" ] && [ "$got" = "$want" ]; } && ok "dotnet $got" || bad "dotnet ${got:-missing} (want $want)"
     { [ -f .git/hooks/pre-commit ] && grep -q lefthook .git/hooks/pre-commit; } \
