@@ -1,18 +1,4 @@
-# Automated versioning — the version/CHANGELOG/tag bot (ADR-0008).
-#
-# Conventional Commits land on main → release-please keeps an open Release PR that bumps the version
-# (Directory.Build.props via the x-release-please-version marker + the manifest) and the changelog.
-# Merging that PR makes release-please materialize the v<X.Y.Z> tag (force-tag-creation) and create the
-# GitHub Release as a DRAFT (config "draft": true); this workflow then dispatches release.yml, which
-# builds → signs → attaches assets to the draft → publishes it. The draft-first order is what makes
-# assets land before the release becomes immutable. Humans never hand-pick or hand-edit a version.
-#
-# A GitHub App token (not GITHUB_TOKEN) is required so release-please pushes the release commit / opens
-# the PR under a signed identity. The App credentials — RELEASE_PLEASE_CLIENT_ID and
-# RELEASE_PLEASE_PRIVATE_KEY — are scoped to the `release-please` environment (no required reviewers —
-# this runs on every push to main; the environment is just the secret boundary, restricted to main).
-# The release.yml dispatch below uses GITHUB_TOKEN — a workflow_dispatch is the one event GITHUB_TOKEN
-# may start (the documented recursion-guard exception). See docs/RELEASING.md.
+# Release proposals and drafts follow docs/adr/0008-build-channels-and-release-please.md.
 name: release-please
 
 on:
@@ -28,39 +14,30 @@ concurrency:
 
 jobs:
   release-please:
+    name: release-please
+    if: >-
+      github.repository_id == '1273122871' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
-    # Scopes the App credentials: RELEASE_PLEASE_CLIENT_ID / RELEASE_PLEASE_PRIVATE_KEY live as
-    # environment secrets here, not repo-wide.
+    timeout-minutes: 10
+    # The credential boundary follows docs/adr/sync-release-app-credentials-to-the-protected-environment.md.
     environment: release-please
     permissions:
-      id-token: write
-      contents: write # create the release commit, the draft Release, and push the Release PR branch
-      pull-requests: write # open and update the Release PR
+      contents: read # The App token authorizes release proposals and drafts.
       actions: write # dispatch release.yml once the draft Release is created
     env:
-      # Server-side boolean — never exposes the secret values. With the App secrets unset the job runs
-      # green and no-ops (ships dormant), which also smooths the one-time rename from the old
-      # RELEASE_PLEASE_APP_ID secrets to the client-id names.
-      HAS_APP: ${{ vars.DOPPLER_AUTOMATION_IDENTITY_ID != '' }}
+      HAS_APP: >-
+        ${{ secrets.RELEASE_PLEASE_CLIENT_ID != '' ||
+        secrets.RELEASE_PLEASE_PRIVATE_KEY != '' }}
+      APP_INPUTS_VALID: >-
+        ${{ secrets.RELEASE_PLEASE_CLIENT_ID != '' &&
+        !startsWith(secrets.RELEASE_PLEASE_CLIENT_ID, '${') &&
+        secrets.RELEASE_PLEASE_PRIVATE_KEY != '' &&
+        !startsWith(secrets.RELEASE_PLEASE_PRIVATE_KEY, '${') }}
     steps:
-      - name: Fetch automation credentials
-        id: doppler_automation_0
-        if: "env.HAS_APP == 'true'"
-        uses: dopplerhq/secrets-fetch-action@451892f16195f9ac360e1a5bcbf0b5fd0e957534
-        with:
-          auth-method: oidc
-          doppler-identity-id: ${{ vars.DOPPLER_AUTOMATION_IDENTITY_ID }}
-          doppler-project: clipvault
-          doppler-config: automation
-          inject-env-vars: false
       - name: Reject missing or unresolved automation credentials
-        if: >-
-          ${{ steps.doppler_automation_0.outcome == 'success' && (
-          steps.doppler_automation_0.outputs.GITHUB_APP_CLIENT_ID == '' ||
-          startsWith(steps.doppler_automation_0.outputs.GITHUB_APP_CLIENT_ID, '${') ||
-          steps.doppler_automation_0.outputs.GITHUB_APP_PRIVATE_KEY == '' ||
-          startsWith(steps.doppler_automation_0.outputs.GITHUB_APP_PRIVATE_KEY, '${')
-          ) }}
+        if: env.HAS_APP == 'true' && env.APP_INPUTS_VALID != 'true'
         shell: bash
         run: exit 1
 
@@ -68,8 +45,12 @@ jobs:
         id: app-token
         if: env.HAS_APP == 'true'
         with:
-          client-id: ${{ steps.doppler_automation_0.outputs.GITHUB_APP_CLIENT_ID }}
-          private-key: ${{ steps.doppler_automation_0.outputs.GITHUB_APP_PRIVATE_KEY }}
+          client-id: ${{ secrets.RELEASE_PLEASE_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: clipvault
+          permission-contents: write
+          permission-pull-requests: write
 
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: rp
@@ -79,12 +60,7 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      # release-please created the GitHub Release as a DRAFT (config "draft": true). Draft releases fire
-      # no `release` event, so explicitly kick off release.yml to build → sign → attach assets to the
-      # draft → publish it. A GITHUB_TOKEN dispatch IS allowed to start a workflow_dispatch run (the
-      # documented recursion-guard exception), so this needs no App token. Only tag_name/sha (plain
-      # string outputs) are used — never fromJSON() a possibly-empty output in a step `env:` (it is
-      # evaluated eagerly regardless of `if:` and would crash the no-op runs). ADR-0008.
+      # Drafts require explicit dispatch under docs/adr/0008-build-channels-and-release-please.md.
       - name: Trigger the signed-release build
         if: ${{ env.HAS_APP == 'true' && steps.rp.outputs.release_created == 'true' }}
         env:
