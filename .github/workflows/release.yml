@@ -93,7 +93,7 @@ jobs:
           cache: false
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           languages: csharp
           build-mode: manual
@@ -105,7 +105,7 @@ jobs:
         run: mise exec -- just build
 
       - name: Analyze release source
-        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           output: artifacts/codeql
           upload: never
@@ -305,7 +305,7 @@ jobs:
           persist-credentials: false
 
       - name: Download unsigned bundle
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: dist
           path: artifacts/bundle/ClipVault
@@ -433,7 +433,7 @@ jobs:
           persist-credentials: false
 
       - name: Download signed bundle
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: dist-signed
           path: artifacts/bundle/ClipVault
@@ -453,7 +453,7 @@ jobs:
           signer-subject-contains: "CN=Yasunobu Sakashita"
 
       - name: Download SBOM
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: sbom
           path: artifacts/sbom
@@ -483,7 +483,7 @@ jobs:
 
       # SLSA build provenance, bound to both signed exes (app body + launcher) and both distributed zips.
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: |
             artifacts/bundle/ClipVault/ClipVault.exe
@@ -494,7 +494,7 @@ jobs:
       # Bind the CycloneDX SBOM to the application binary. actions/attest-sbom was deprecated; the generic
       # actions/attest carries the same SBOM predicate.
       - name: Attest SBOM
-        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: artifacts/bundle/ClipVault/app/ClipVault.App.exe
           sbom-path: artifacts/sbom/clipvault.cdx.json

@@ -1,14 +1,14 @@
 # ClipVault toolchain definition (versions pinned for reproducibility).
 # Usage: after `mise install` in this directory, run `mise exec -- dotnet ...` / `mise run <task>`.
 [tools]
-lefthook = "2.1.9"
-just = "1.53.0"
-typos = "1.47.2"
+lefthook = "2.2.2"
+just = "1.59.0"
+typos = "1.52.0"
 # Day-1 lint tooling shared with project-template's house style.
 # Native binaries (no foreign runtime), so they install cleanly on a .NET-only machine.
 # Exact versions + checksums are recorded in mise.lock.
 actionlint = "1.7.12"
-"github:crate-ci/committed" = "1.1.11"
+"github:crate-ci/committed" = "v1.1.12"
 # yamllint (Python) and markdownlint-cli2 (Node) are deliberately NOT pinned here: a .NET project does not otherwise carry those runtimes.
 # Their `just` recipes no-op locally with an install hint and CI installs them to enforce the pass — the same approach the template takes for yamllint.
 
