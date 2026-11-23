@@ -52,21 +52,21 @@ public sealed partial class SettingsViewModel : ObservableObject
         _themeService = themeService;
 
         // Language picker: endonyms for concrete languages, plus a localized label for the OS-following default.
-        LanguageOptions =
+        LanguageOptions = Array.AsReadOnly<LanguageOption>(
         [
             new LanguageOption(AppLanguage.System, _loc.GetString("Settings.Language.System")),
             new LanguageOption(AppLanguage.Japanese, "日本語"),
             new LanguageOption(AppLanguage.English, "English"),
             new LanguageOption(AppLanguage.ChineseSimplified, "简体中文"),
-        ];
+        ]);
 
         // Theme picker (applied immediately, unlike language).
-        ThemeOptions =
+        ThemeOptions = Array.AsReadOnly<ThemeOption>(
         [
             new ThemeOption(AppTheme.System, _loc.GetString("Settings.Theme.System")),
             new ThemeOption(AppTheme.Light, _loc.GetString("Settings.Theme.Light")),
             new ThemeOption(AppTheme.Dark, _loc.GetString("Settings.Theme.Dark")),
-        ];
+        ]);
 
         LoadFromBackend();
 
