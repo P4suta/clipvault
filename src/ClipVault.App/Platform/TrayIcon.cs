@@ -1,4 +1,6 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.Shell;
@@ -36,13 +38,13 @@ internal sealed class TrayIcon : IDisposable
     /// <param name="iconPath">The path to the .ico file (absolute, or relative to the executable).</param>
     /// <param name="tooltip">The tooltip text shown for the icon.</param>
     /// <returns>True if the icon was added successfully; otherwise false.</returns>
-    public unsafe bool Create(string iconPath, string tooltip)
+    public bool Create(string iconPath, string tooltip)
     {
         _icon = LoadIcon(iconPath);
 
         var data = new NOTIFYICONDATAW
         {
-            cbSize = (uint)sizeof(NOTIFYICONDATAW),
+            cbSize = GetSize(),
             hWnd = _hwnd,
             uID = IconId,
             uFlags = NOTIFY_ICON_DATA_FLAGS.NIF_MESSAGE
@@ -74,6 +76,7 @@ internal sealed class TrayIcon : IDisposable
     /// </summary>
     /// <param name="items">The menu items to display.</param>
     /// <returns>The selected command ID, or 0 if nothing was selected.</returns>
+    [SuppressMessage("Major Code Smell", "S6640", Justification = "The raw HMENU overload reads pinned item text during AppendMenu and accepts a null exclusion rectangle.")]
     public unsafe uint ShowContextMenu(TrayMenuItem[] items)
     {
         var menu = PInvoke.CreatePopupMenu();
@@ -158,7 +161,7 @@ internal sealed class TrayIcon : IDisposable
         }
     }
 
-    private static unsafe void SetTooltip(ref NOTIFYICONDATAW data, string tooltip)
+    private static void SetTooltip(ref NOTIFYICONDATAW data, string tooltip)
     {
         // szTip is a fixed-length buffer. Copy safely including the terminating NUL.
         var span = data.szTip.AsSpan();
@@ -168,6 +171,7 @@ internal sealed class TrayIcon : IDisposable
         span[length] = '\0';
     }
 
+    [SuppressMessage("Major Code Smell", "S6640", Justification = "LoadImage reads the pinned path during the call and returns the native icon handle released by Dispose.")]
     private static unsafe HICON LoadIcon(string iconPath)
     {
         // Resolve a path relative to the executable into an absolute path (unpackaged deployment).
@@ -190,5 +194,5 @@ internal sealed class TrayIcon : IDisposable
         }
     }
 
-    private static unsafe uint GetSize() => (uint)sizeof(NOTIFYICONDATAW);
+    private static uint GetSize() => (uint)Unsafe.SizeOf<NOTIFYICONDATAW>();
 }

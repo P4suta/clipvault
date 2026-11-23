@@ -68,7 +68,7 @@ public sealed partial class PassphrasePromptWindow : Window
 
     [DllImport("user32.dll")]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
-    private static extern uint GetDpiForWindow(IntPtr hWnd);
+    private static extern uint GetDpiForWindow(nint hWnd);
 
     private void ResizeForDpi(int widthDip, int heightDip)
     {

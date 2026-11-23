@@ -77,8 +77,8 @@ public class SettingsViewModelTests
 
         Assert.Equal(loc.GetString(guaranteeKey), vm.AtRestGuarantee);
         Assert.Equal(loc.GetString(extraKey), vm.ExtraProtection);
-        Assert.NotEqual(guaranteeKey, vm.AtRestGuarantee); // Resolved to real copy, not the missing-key fallback.
-        Assert.NotEqual(extraKey, vm.ExtraProtection);
+        Assert.NotEqual(guaranteeKey, vm.AtRestGuarantee, StringComparer.Ordinal); // Resolved to real copy, not the missing-key fallback.
+        Assert.NotEqual(extraKey, vm.ExtraProtection, StringComparer.Ordinal);
     }
 
     // ---------- Protection ----------
@@ -167,7 +167,7 @@ public class SettingsViewModelTests
         }
 
         var expected = new[] { "alpha", "mango", "zebra" };
-        Assert.Equal(expected, vm.ExcludedApps.Select(a => a.Name));
+        Assert.Equal(expected, vm.ExcludedApps.Select(a => a.Name), StringComparer.Ordinal);
     }
 
     [Fact]
@@ -223,7 +223,7 @@ public class SettingsViewModelTests
         var vm = Build(settings);
 
         Assert.NotNull(vm.SelectedLanguage);
-        Assert.Equal(AppLanguage.English, vm.SelectedLanguage!.Value);
+        Assert.Equal(AppLanguage.English, vm.SelectedLanguage.Value);
     }
 
     [Fact]
@@ -250,7 +250,7 @@ public class SettingsViewModelTests
         var vm = Build(settings);
 
         Assert.NotNull(vm.SelectedTheme);
-        Assert.Equal(AppTheme.Dark, vm.SelectedTheme!.Value);
+        Assert.Equal(AppTheme.Dark, vm.SelectedTheme.Value);
     }
 
     [Fact]

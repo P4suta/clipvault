@@ -27,8 +27,8 @@ public class HistoryQueryServiceFacetScanTests
         var facets = await new HistoryQueryService(repo).GetFacetsAsync();
 
         // The facet scan is capped to recent history, so the long-buried "ancientapp" is not offered as a filter.
-        Assert.Contains("recentapp", facets.SourceApps);
-        Assert.DoesNotContain("ancientapp", facets.SourceApps);
+        Assert.Contains("recentapp", facets.SourceApps, StringComparer.Ordinal);
+        Assert.DoesNotContain("ancientapp", facets.SourceApps, StringComparer.Ordinal);
     }
 
     private static ClipboardEntry TextEntry(string hash, string app, DateTimeOffset at) =>

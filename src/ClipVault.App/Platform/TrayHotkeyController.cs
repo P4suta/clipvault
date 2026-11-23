@@ -80,8 +80,7 @@ internal sealed class TrayHotkeyController : IDisposable
         _trayIcon.Dispose();
     }
 
-    // Gets the HWND of the foreground window as nint (CsWin32's HWND wraps a void*).
-    private static unsafe nint GetForegroundHwnd() => (nint)PInvoke.GetForegroundWindow().Value;
+    private static nint GetForegroundHwnd() => (nint)PInvoke.GetForegroundWindow();
 
     // Called from the hook proc when Win+V is pressed: hand off to the UI thread without blocking the hook.
     private void OnSummonRequested() => PInvoke.PostMessage(_hwnd, WmSummon, default, default);

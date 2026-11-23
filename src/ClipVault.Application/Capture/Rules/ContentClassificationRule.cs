@@ -9,6 +9,7 @@ namespace ClipVault.Application.Capture.Rules;
 /// (rejection wins); otherwise the first mask is applied, replacing the content and the preview. The full text is
 /// scanned (each classifier regex is bounded by a match timeout) so a secret near the end is not missed.
 /// </summary>
+/// <param name="classifiers">Classifiers that inspect captured text in registration order.</param>
 public sealed class ContentClassificationRule(IEnumerable<IClipboardContentClassifier> classifiers) : ICaptureRule
 {
     private readonly IReadOnlyList<IClipboardContentClassifier> _classifiers = classifiers.ToList();

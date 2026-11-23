@@ -109,21 +109,6 @@ public sealed class JsonSettingsService : ISettingsService
 
         public string Theme { get; init; } = nameof(AppTheme.System);
 
-        public ClipVaultSettings ToSettings() => new()
-        {
-            Storage = Enum.TryParse<StorageMode>(Storage, out var mode) ? mode : StorageMode.EncryptedDisk,
-            ExcludedProcessNames = new HashSet<string>(ExcludedProcessNames, StringComparer.OrdinalIgnoreCase),
-            MaskGenericPasswords = MaskGenericPasswords,
-            StripTrackingParameters = StripTrackingParameters,
-            MaxImageBytes = MaxImageBytes,
-            MaxAgeDays = MaxAgeDays,
-            MaxEntries = MaxEntries,
-            MaxHistoryBytes = MaxHistoryBytes,
-            RunAtStartup = RunAtStartup,
-            Language = Enum.TryParse<AppLanguage>(Language, out var language) ? language : AppLanguage.System,
-            Theme = Enum.TryParse<AppTheme>(Theme, out var theme) ? theme : AppTheme.System,
-        };
-
         public static SettingsDto FromSettings(ClipVaultSettings s) => new()
         {
             Storage = s.Storage.ToString(),
@@ -137,6 +122,21 @@ public sealed class JsonSettingsService : ISettingsService
             RunAtStartup = s.RunAtStartup,
             Language = s.Language.ToString(),
             Theme = s.Theme.ToString(),
+        };
+
+        public ClipVaultSettings ToSettings() => new()
+        {
+            Storage = Enum.TryParse<StorageMode>(Storage, out var mode) ? mode : StorageMode.EncryptedDisk,
+            ExcludedProcessNames = new HashSet<string>(ExcludedProcessNames, StringComparer.OrdinalIgnoreCase),
+            MaskGenericPasswords = MaskGenericPasswords,
+            StripTrackingParameters = StripTrackingParameters,
+            MaxImageBytes = MaxImageBytes,
+            MaxAgeDays = MaxAgeDays,
+            MaxEntries = MaxEntries,
+            MaxHistoryBytes = MaxHistoryBytes,
+            RunAtStartup = RunAtStartup,
+            Language = Enum.TryParse<AppLanguage>(Language, out var language) ? language : AppLanguage.System,
+            Theme = Enum.TryParse<AppTheme>(Theme, out var theme) ? theme : AppTheme.System,
         };
     }
 }
