@@ -39,6 +39,7 @@ public sealed partial class HelloUnlockWindow : Window
         _keyProtector = keyProtector ?? throw new ArgumentNullException(nameof(keyProtector));
         _hello = hello ?? throw new ArgumentNullException(nameof(hello));
 
+        ResultTask = _completion.Task;
         InitializeComponent();
 
         ExtendsContentIntoTitleBar = true;
@@ -66,7 +67,7 @@ public sealed partial class HelloUnlockWindow : Window
     /// <summary>
     /// Gets the resolution result: on success the decrypted DEK, or on exit / window close null.
     /// </summary>
-    public Task<byte[]?> ResultTask => _completion.Task;
+    public Task<byte[]?> ResultTask { get; }
 
     [DllImport("user32.dll")]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]

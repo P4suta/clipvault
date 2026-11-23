@@ -25,7 +25,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 20
     permissions:
-      contents: read # only needs to read the repository
+      contents: read # Check out the commits in the pull request.
+      pull-requests: read # Verify the authors and signatures of the listed commits.
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -46,13 +47,19 @@ jobs:
       # Conventional Commits gate on the PR's commit range (squash-merge uses the PR title; this also
       # catches non-conforming commits early).
       - name: Lint commit messages (Conventional Commits)
-        # Renovate's generated dependency subjects may exceed the 50-character human-commit limit, so its pull requests use the reviewed squash title instead.
-        if: github.event_name == 'pull_request' && github.actor != 'renovate[bot]'
+        if: github.event_name == 'pull_request'
         shell: bash
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
-        run: mise exec -- committed "${BASE}..${HEAD}" --no-merge-commit
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/commits" \
+            --jq '.[] | select(.author.login == "renovate[bot]" and .committer.login == "web-flow" and .commit.verification.verified and (.parents | length) == 1) | .sha' \
+            > "${RUNNER_TEMP}/renovate-commits"
+          bash .ci/check-commits.sh "${RUNNER_TEMP}/renovate-commits"
 
       # Enforce the committed lockfiles (fails closed if packages.lock.json drifts).
       - name: Restore (locked)
