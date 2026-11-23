@@ -4,6 +4,7 @@ using ClipVault.Domain.ValueObjects;
 namespace ClipVault.Application.Capture.Rules;
 
 /// <summary>Discards the capture when the originating process is on the exclusion list (password managers and the like).</summary>
+/// <param name="settings">Provides the process names excluded from capture.</param>
 public sealed class SourceAppRule(ISettingsService settings) : ICaptureRule
 {
     /// <inheritdoc/>

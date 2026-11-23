@@ -9,6 +9,7 @@ namespace ClipVaultApp.Services;
 /// Because the WinRT clipboard APIs must run on the UI thread, Infrastructure calls into this seam.
 /// Construct it as a singleton, passing the DispatcherQueue obtained on the UI thread.
 /// </summary>
+/// <param name="dispatcherQueue">The queue for the user interface thread.</param>
 public sealed class UiDispatcher(DispatcherQueue dispatcherQueue) : IUiDispatcher
 {
     private readonly DispatcherQueue _dispatcherQueue = dispatcherQueue

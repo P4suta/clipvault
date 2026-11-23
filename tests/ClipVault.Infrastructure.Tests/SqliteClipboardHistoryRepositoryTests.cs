@@ -23,7 +23,7 @@ public class SqliteClipboardHistoryRepositoryTests
         var found = await repo.FindByHashAsync(new ContentHash("h1"));
 
         Assert.NotNull(found);
-        Assert.Equal(entry.Id, found!.Id);
+        Assert.Equal(entry.Id, found.Id);
         Assert.Equal("hello", found.Preview);
     }
 
@@ -50,7 +50,7 @@ public class SqliteClipboardHistoryRepositoryTests
 
         var all = await repo.GetAllAsync();
 
-        Assert.Equal(ExpectedPinnedOrder, all.Select(e => e.Preview));
+        Assert.Equal(ExpectedPinnedOrder, all.Select(e => e.Preview), StringComparer.Ordinal);
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public class SqliteClipboardHistoryRepositoryTests
         var content = await repo.MaterializeAsync(entry.Id);
 
         Assert.NotNull(content);
-        Assert.Equal("the full clipboard payload", Encoding.UTF8.GetString(content!.Payload));
+        Assert.Equal("the full clipboard payload", Encoding.UTF8.GetString(content.Payload));
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public class SqliteClipboardHistoryRepositoryTests
 
         Assert.Equal(ClipContentType.Image, got.ContentType);
         Assert.NotNull(got.Image);
-        Assert.Equal(new byte[] { 9, 8, 7 }, got.Image!.Thumbnail);
+        Assert.Equal(new byte[] { 9, 8, 7 }, got.Image.Thumbnail);
         Assert.Equal(100, got.Image.Width);
         Assert.Equal(50, got.Image.Height);
     }
@@ -140,7 +140,7 @@ public class SqliteClipboardHistoryRepositoryTests
         var content = await repo.MaterializeAsync(entry.Id);
 
         Assert.NotNull(content);
-        Assert.Equal(ClipContentType.Image, content!.Type);
+        Assert.Equal(ClipContentType.Image, content.Type);
         Assert.Equal(payload, content.Payload);
     }
 
@@ -256,7 +256,7 @@ public class SqliteClipboardHistoryRepositoryTests
 
         Assert.Equal(1, removed); // only the unpinned "o" captured before the cutoff
         string[] survivors = ["p", "r"];
-        Assert.Equal(survivors, (await repo.GetAllAsync()).Select(e => e.Preview));
+        Assert.Equal(survivors, (await repo.GetAllAsync()).Select(e => e.Preview), StringComparer.Ordinal);
     }
 
     [Fact]
@@ -271,7 +271,7 @@ public class SqliteClipboardHistoryRepositoryTests
 
         Assert.Equal(2, removed);
         string[] survivors = ["c"];
-        Assert.Equal(survivors, (await repo.GetAllAsync()).Select(e => e.Preview));
+        Assert.Equal(survivors, (await repo.GetAllAsync()).Select(e => e.Preview), StringComparer.Ordinal);
     }
 
     [Fact]
@@ -287,7 +287,7 @@ public class SqliteClipboardHistoryRepositoryTests
 
         Assert.Equal(2, removed);
         string[] survivors = ["newest"];
-        Assert.Equal(survivors, (await repo.GetAllAsync()).Select(e => e.Preview));
+        Assert.Equal(survivors, (await repo.GetAllAsync()).Select(e => e.Preview), StringComparer.Ordinal);
     }
 
     [Fact]
@@ -315,7 +315,7 @@ public class SqliteClipboardHistoryRepositoryTests
         var paged = await DrainAsync(repo, pageSize: 2);
         var all = await repo.GetAllAsync();
 
-        Assert.Equal(all.Select(e => e.Preview), paged.Select(e => e.Preview));
+        Assert.Equal(all.Select(e => e.Preview), paged.Select(e => e.Preview), StringComparer.Ordinal);
     }
 
     [Fact]
@@ -349,7 +349,7 @@ public class SqliteClipboardHistoryRepositoryTests
         var got = Assert.Single((await repo.GetPageAsync(null, 10)).Entries);
 
         Assert.NotNull(got.Image);
-        Assert.Empty(got.Image!.Thumbnail); // bytes omitted from the list projection
+        Assert.Empty(got.Image.Thumbnail); // bytes omitted from the list projection
         Assert.Equal(10, got.Image.Width);
         Assert.Equal(5, got.Image.Height);
     }

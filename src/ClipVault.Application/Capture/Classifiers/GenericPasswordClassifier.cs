@@ -8,6 +8,7 @@ namespace ClipVault.Application.Capture.Classifiers;
 /// letters plus digits plus a symbol, and has high entropy. Because this area is prone to false positives, the
 /// conditions are deliberately strict, and it does nothing when disabled in settings.
 /// </summary>
+/// <param name="settings">Provides the current password detection settings.</param>
 public sealed class GenericPasswordClassifier(ISettingsService settings) : IClipboardContentClassifier
 {
     /// <inheritdoc/>

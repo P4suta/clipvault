@@ -10,6 +10,7 @@ namespace ClipVault.Application.Capture.Rules;
 /// paste-back) is clean. Only single-URL text clips are affected; arbitrary text is left unchanged. The OS
 /// clipboard itself is never rewritten.
 /// </summary>
+/// <param name="settings">Controls whether tracking parameters are removed from captured URLs.</param>
 public sealed class UrlCleaningRule(ISettingsService settings) : ICaptureRule
 {
     /// <inheritdoc/>

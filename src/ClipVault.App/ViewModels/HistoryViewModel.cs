@@ -203,7 +203,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
             return;
         }
 
-        var copied = await _actionService.CopyToClipboardAsync(item.Entry);
+        var copied = await _actionService.CopyToClipboardAsync(item.Entry, CancellationToken.None);
 
         // Reload is triggered by the HistoryChangedMessage. Request paste-back only when the write succeeded.
         if (copied)
@@ -221,7 +221,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
             return;
         }
 
-        await _actionService.TogglePinAsync(item.Entry);
+        await _actionService.TogglePinAsync(item.Entry, CancellationToken.None);
     }
 
     /// <summary>Deletes the entry.</summary>
@@ -233,12 +233,12 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
             return;
         }
 
-        await _actionService.DeleteAsync(item.Entry);
+        await _actionService.DeleteAsync(item.Entry, CancellationToken.None);
     }
 
     /// <summary>Clears the entire history.</summary>
     [RelayCommand]
-    private async Task ClearAllAsync() => await _actionService.ClearAllAsync();
+    private async Task ClearAllAsync() => await _actionService.ClearAllAsync(CancellationToken.None);
 
     /// <summary>Opens the read-only full-content view for the selected entry (full text, or the full-size image).</summary>
     /// <param name="item">The entry to show, or <see langword="null"/> when invoked without a selection.</param>
@@ -255,7 +255,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
             return;
         }
 
-        var content = await _actionService.MaterializeForViewAsync(item.Entry);
+        var content = await _actionService.MaterializeForViewAsync(item.Entry, CancellationToken.None);
         if (content is null)
         {
             return;
@@ -328,7 +328,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
         }
 
         using var content = new ClipContent(ClipContentType.Text, Encoding.UTF8.GetBytes(cleaned));
-        await _actionService.CopyForViewAsync(content);
+        await _actionService.CopyForViewAsync(content, CancellationToken.None);
     }
 
     /// <summary>Copies the detail-view JSON back to the clipboard, pretty-printed.</summary>
@@ -348,7 +348,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
         }
 
         using var content = new ClipContent(ClipContentType.Text, Encoding.UTF8.GetBytes(formatted));
-        await _actionService.CopyForViewAsync(content);
+        await _actionService.CopyForViewAsync(content, CancellationToken.None);
     }
 
     /// <summary>Copies the content currently shown in the full-content view back to the clipboard.</summary>
@@ -358,7 +358,7 @@ public sealed partial class HistoryViewModel : ObservableObject, IRecipient<Hist
     {
         if (_detailContent is not null)
         {
-            await _actionService.CopyForViewAsync(_detailContent);
+            await _actionService.CopyForViewAsync(_detailContent, CancellationToken.None);
         }
     }
 

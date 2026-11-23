@@ -118,7 +118,7 @@ public class HistoryQueryServiceTests
 
         // Batch 1 yields one match (<2), so batch 2 is scanned to reach 2 — and the third batch is never fetched.
         string[] expected = ["match a", "match b"];
-        Assert.Equal(expected, page.Entries.Select(e => e.Preview));
+        Assert.Equal(expected, page.Entries.Select(e => e.Preview), StringComparer.Ordinal);
         Assert.Equal(c2, page.NextCursor);
         await repo.Received(2).GetPageAsync(Arg.Any<HistoryCursor?>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
     }

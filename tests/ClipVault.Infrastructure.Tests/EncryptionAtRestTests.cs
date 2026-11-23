@@ -136,7 +136,7 @@ public sealed class EncryptionAtRestTests : IDisposable
 
         // The content hash is stored in the clear (it is non-reversible) but it must be the keyed HMAC,
         // not a plain SHA-256 that would let an attacker correlate known plaintexts across vaults.
-        Assert.NotEqual(plainSha256, keyedHashHex);
+        Assert.NotEqual(plainSha256, keyedHashHex, StringComparer.Ordinal);
         AssertAbsentFromAllFiles(plainSha256);
         AssertAbsentFromAllFiles(secret);
         AssertPresentInSomeFile(keyedHashHex);

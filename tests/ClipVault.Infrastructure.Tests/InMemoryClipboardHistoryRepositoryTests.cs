@@ -58,7 +58,7 @@ public class InMemoryClipboardHistoryRepositoryTests
         await repo.UpdateAsync(b);
 
         var all = await repo.GetAllAsync();
-        Assert.Equal(ExpectedPinnedOrder, all.Select(e => e.Preview));
+        Assert.Equal(ExpectedPinnedOrder, all.Select(e => e.Preview), StringComparer.Ordinal);
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public class InMemoryClipboardHistoryRepositoryTests
         var content = await repo.MaterializeAsync(entry.Id);
 
         Assert.NotNull(content);
-        Assert.Equal(ClipContentType.Image, content!.Type);
+        Assert.Equal(ClipContentType.Image, content.Type);
         Assert.Equal(payload, content.Payload);
     }
 
@@ -141,7 +141,7 @@ public class InMemoryClipboardHistoryRepositoryTests
         // The oldest unpinned entry ("a") is evicted immediately to keep the ring at the 2-entry budget.
         Assert.Equal(2, await repo.CountAsync());
         string[] expected = ["c", "b"];
-        Assert.Equal(expected, (await repo.GetAllAsync()).Select(e => e.Preview));
+        Assert.Equal(expected, (await repo.GetAllAsync()).Select(e => e.Preview), StringComparer.Ordinal);
         Assert.Null(await repo.FindByHashAsync(new ContentHash("h1")));
     }
 
@@ -175,7 +175,7 @@ public class InMemoryClipboardHistoryRepositoryTests
 
         // Budget is 2: the pinned "a" is always kept; among unpinned, only the newest ("c") survives.
         string[] expected = ["a", "c"];
-        Assert.Equal(expected, (await repo.GetAllAsync()).Select(e => e.Preview));
+        Assert.Equal(expected, (await repo.GetAllAsync()).Select(e => e.Preview), StringComparer.Ordinal);
     }
 
     [Fact]
@@ -193,7 +193,7 @@ public class InMemoryClipboardHistoryRepositoryTests
 
         Assert.Equal(1, removed); // only the unpinned "o" captured before the cutoff
         string[] survivors = ["p", "r"];
-        Assert.Equal(survivors, (await repo.GetAllAsync()).Select(e => e.Preview));
+        Assert.Equal(survivors, (await repo.GetAllAsync()).Select(e => e.Preview), StringComparer.Ordinal);
     }
 
     [Fact]
@@ -208,7 +208,7 @@ public class InMemoryClipboardHistoryRepositoryTests
 
         Assert.Equal(2, removed);
         string[] survivors = ["c"];
-        Assert.Equal(survivors, (await repo.GetAllAsync()).Select(e => e.Preview));
+        Assert.Equal(survivors, (await repo.GetAllAsync()).Select(e => e.Preview), StringComparer.Ordinal);
     }
 
     [Fact]
@@ -234,7 +234,7 @@ public class InMemoryClipboardHistoryRepositoryTests
 
         Assert.Equal(2, removed);
         string[] survivors = ["newest"];
-        Assert.Equal(survivors, (await repo.GetAllAsync()).Select(e => e.Preview));
+        Assert.Equal(survivors, (await repo.GetAllAsync()).Select(e => e.Preview), StringComparer.Ordinal);
     }
 
     [Fact]
@@ -267,7 +267,7 @@ public class InMemoryClipboardHistoryRepositoryTests
         var paged = await DrainAsync(repo, pageSize: 2);
         var all = await repo.GetAllAsync();
 
-        Assert.Equal(all.Select(e => e.Preview), paged.Select(e => e.Preview));
+        Assert.Equal(all.Select(e => e.Preview), paged.Select(e => e.Preview), StringComparer.Ordinal);
     }
 
     [Fact]

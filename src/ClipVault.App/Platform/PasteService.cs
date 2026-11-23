@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
@@ -69,7 +70,7 @@ internal static class PasteService
         }
     }
 
-    private static unsafe void SendCtrlV()
+    private static void SendCtrlV()
     {
         // Four events: CONTROL down -> V down -> V up -> CONTROL up.
         var inputs = new INPUT[4];
@@ -79,7 +80,7 @@ internal static class PasteService
         inputs[2] = KeyUp(VIRTUAL_KEY.VK_V);
         inputs[3] = KeyUp(VIRTUAL_KEY.VK_CONTROL);
 
-        var inserted = PInvoke.SendInput(inputs.AsSpan(), sizeof(INPUT));
+        var inserted = PInvoke.SendInput(inputs.AsSpan(), Unsafe.SizeOf<INPUT>());
         if (inserted != (uint)inputs.Length)
         {
             // Input can be blocked (UIPI / another app holding the foreground); paste-back is best-effort.

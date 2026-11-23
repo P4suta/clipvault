@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Windows.Win32;
 using Windows.Win32.Foundation;
@@ -65,13 +66,13 @@ internal sealed class LowLevelKeyboardHook : IDisposable
         => (PInvoke.GetAsyncKeyState((int)VIRTUAL_KEY.VK_LWIN) & 0x8000) != 0
             || (PInvoke.GetAsyncKeyState((int)VIRTUAL_KEY.VK_RWIN) & 0x8000) != 0;
 
-    private static unsafe void MaskWinKey()
+    private static void MaskWinKey()
     {
         // A lone Ctrl tap counts as activity during the Win hold (suppresses the Start menu) but is otherwise inert.
         var inputs = new INPUT[2];
         inputs[0] = MakeKey(VIRTUAL_KEY.VK_LCONTROL, keyUp: false);
         inputs[1] = MakeKey(VIRTUAL_KEY.VK_LCONTROL, keyUp: true);
-        PInvoke.SendInput(inputs.AsSpan(), sizeof(INPUT));
+        PInvoke.SendInput(inputs.AsSpan(), Unsafe.SizeOf<INPUT>());
     }
 
     private static INPUT MakeKey(VIRTUAL_KEY key, bool keyUp) => new()
@@ -91,11 +92,11 @@ internal sealed class LowLevelKeyboardHook : IDisposable
         "Design",
         "CA1031:Do not catch general exception types",
         Justification = "Runs on the native message pump; an escaping exception would cross the unmanaged boundary.")]
-    private unsafe LRESULT HookProc(int nCode, WPARAM wParam, LPARAM lParam)
+    private LRESULT HookProc(int nCode, WPARAM wParam, LPARAM lParam)
     {
         if (nCode >= 0)
         {
-            var data = *(KBDLLHOOKSTRUCT*)lParam.Value;
+            var data = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam.Value);
             var injected = (data.flags & KBDLLHOOKSTRUCT_FLAGS.LLKHF_INJECTED) == KBDLLHOOKSTRUCT_FLAGS.LLKHF_INJECTED;
 
             if (!injected && data.vkCode == (uint)_key && IsWinDown())
