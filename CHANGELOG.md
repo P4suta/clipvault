@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/).
 
+## [0.1.1](https://github.com/P4suta/clipvault/compare/v0.1.0...v0.1.1) (2026-11-23)
+
+
+### Bug Fixes
+
+* **build:** select the pinned SDK ([#64](https://github.com/P4suta/clipvault/issues/64)) ([e2729df](https://github.com/P4suta/clipvault/commit/e2729dfed1186f883a6ee9a3312156971465b4b1))
+* **ci:** recognize Renovate dependency commits ([#51](https://github.com/P4suta/clipvault/issues/51)) ([5233ca7](https://github.com/P4suta/clipvault/commit/5233ca779a2d3fe3fc9bb94c51f3d448cf1debd3))
+
 ## 0.1.0 (2026-07-01)
 
 
