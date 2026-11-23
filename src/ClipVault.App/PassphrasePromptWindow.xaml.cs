@@ -36,6 +36,7 @@ public sealed partial class PassphrasePromptWindow : Window
     {
         _keyProtector = keyProtector ?? throw new ArgumentNullException(nameof(keyProtector));
 
+        ResultTask = _completion.Task;
         InitializeComponent();
 
         ExtendsContentIntoTitleBar = true;
@@ -63,7 +64,7 @@ public sealed partial class PassphrasePromptWindow : Window
     /// <summary>
     /// Gets the resolution result: on success the validated passphrase, or on exit / window close null.
     /// </summary>
-    public Task<string?> ResultTask => _completion.Task;
+    public Task<string?> ResultTask { get; }
 
     [DllImport("user32.dll")]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
